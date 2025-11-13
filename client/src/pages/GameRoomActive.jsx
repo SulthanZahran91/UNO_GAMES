@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import GameTable from '../components/GameTable';
 import PlayerHand from '../components/PlayerHand';
 import ColorPicker from '../components/ColorPicker';
 import OpponentDisplay from '../components/OpponentDisplay';
 import TurnIndicator from '../components/TurnIndicator';
 import ActionNotification from '../components/ActionNotification';
+import CardAnimation from '../components/CardAnimation';
 import { playCard as playCardService, drawCard as drawCardService } from '../services/gameFunctions';
 
 /**
@@ -17,6 +18,8 @@ export default function GameRoomActive({ game, user, gameId }) {
   const [actionError, setActionError] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCard, setPendingCard] = useState(null);
+  const [activeAnimation, setActiveAnimation] = useState(null);
+  const lastGameLogLength = useRef(0);
 
   console.log('🎮 GameRoomActive render:', {
     gameId,
@@ -31,6 +34,64 @@ export default function GameRoomActive({ game, user, gameId }) {
 
   // Get my player data
   const myPlayer = game.players?.find(p => p.uid === user?.uid);
+
+  // Determine player position for animations
+  const getPlayerPosition = (playerUid) => {
+    if (playerUid === user?.uid) return 'you';
+
+    const opponents = game.players.filter(p => p.uid !== user?.uid);
+    const opponentIndex = opponents.findIndex(p => p.uid === playerUid);
+
+    if (opponents.length === 1) return 'opponent-top';
+    if (opponents.length === 2) {
+      return opponentIndex === 0 ? 'opponent-left' : 'opponent-right';
+    }
+    // 3 opponents
+    if (opponentIndex === 0) return 'opponent-left';
+    if (opponentIndex === 1) return 'opponent-top';
+    return 'opponent-right';
+  };
+
+  // Watch for new game actions and trigger animations
+  useEffect(() => {
+    if (!game.gameLog || game.gameLog.length === 0) return;
+
+    // Check if there's a new action
+    if (game.gameLog.length > lastGameLogLength.current) {
+      const latestAction = game.gameLog[game.gameLog.length - 1];
+      console.log('🎬 New action detected:', latestAction);
+
+      // Parse the action to determine type and player
+      if (latestAction.includes('played')) {
+        // Extract player name (before " played")
+        const playerName = latestAction.split(' played')[0];
+        const player = game.players.find(p => p.displayName === playerName);
+
+        if (player) {
+          setActiveAnimation({
+            type: 'play',
+            card: game.currentCard, // The card that was just played
+            playerName: player.displayName,
+            fromPosition: getPlayerPosition(player.uid),
+          });
+        }
+      } else if (latestAction.includes('draws') || latestAction.includes('drew')) {
+        // Extract player name (before " draws" or " drew")
+        const playerName = latestAction.split(' draw')[0];
+        const player = game.players.find(p => p.displayName === playerName);
+
+        if (player) {
+          setActiveAnimation({
+            type: 'draw',
+            playerName: player.displayName,
+            fromPosition: getPlayerPosition(player.uid),
+          });
+        }
+      }
+    }
+
+    lastGameLogLength.current = game.gameLog.length;
+  }, [game.gameLog, game.players, game.currentCard, user?.uid]);
 
   const handleCardClick = async (card, cardIndex) => {
     console.log('🃏 Card clicked:', { card, cardIndex, isMyTurn });
@@ -182,6 +243,20 @@ export default function GameRoomActive({ game, user, gameId }) {
           currentCard={game.currentCard}
           activeColor={game.activeColor}
           disabled={!isMyTurn || actionLoading}
+        />
+      )}
+
+      {/* Card Animations */}
+      {activeAnimation && (
+        <CardAnimation
+          type={activeAnimation.type}
+          card={activeAnimation.card}
+          playerName={activeAnimation.playerName}
+          fromPosition={activeAnimation.fromPosition}
+          onComplete={() => {
+            console.log('🎬 Animation completed');
+            setActiveAnimation(null);
+          }}
         />
       )}
     </div>
