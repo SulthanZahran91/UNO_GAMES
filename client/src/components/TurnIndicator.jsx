@@ -48,26 +48,26 @@ export default function TurnIndicator({
   return (
     <div style={{
       position: 'fixed',
-      top: '1.25rem',
+      top: 'clamp(0.5rem, 2vh, 1.25rem)',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 1000,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '0.75rem',
+      gap: 'clamp(0.375rem, 1.5vh, 0.75rem)',
       maxWidth: '95vw',
     }}>
       {/* Main Turn Indicator */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.9375rem',
-        padding: '0.9375rem 1.875rem',
+        gap: 'clamp(0.5rem, 2vw, 0.9375rem)',
+        padding: 'clamp(0.625rem, 2vh, 0.9375rem) clamp(1rem, 4vw, 1.875rem)',
         background: isMyTurn
           ? 'linear-gradient(135deg, rgba(0, 255, 0, 0.9) 0%, rgba(0, 200, 0, 0.95) 100%)'
           : 'linear-gradient(135deg, rgba(255, 170, 0, 0.9) 0%, rgba(255, 140, 0, 0.95) 100%)',
-        borderRadius: '3.125rem',
+        borderRadius: 'clamp(1.5rem, 5vw, 3.125rem)',
         boxShadow: isMyTurn
           ? '0 0 1.875rem rgba(0, 255, 0, 0.6), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)'
           : '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
@@ -79,7 +79,7 @@ export default function TurnIndicator({
       }}>
         {/* Direction Indicator */}
         <div style={{
-          fontSize: '1.5rem',
+          fontSize: 'clamp(1rem, 3vw, 1.5rem)',
           animation: 'rotate 2s linear infinite',
         }} role="img" aria-label={direction === 'clockwise' ? 'Clockwise direction' : 'Counter-clockwise direction'}>
           {direction === 'clockwise' ? '↻' : '↺'}
@@ -92,7 +92,7 @@ export default function TurnIndicator({
           alignItems: 'center',
         }}>
           <div style={{
-            fontSize: '0.75rem',
+            fontSize: 'clamp(0.625rem, 2vw, 0.75rem)',
             fontWeight: 'bold',
             textTransform: 'uppercase',
             letterSpacing: '0.0625rem',
@@ -102,7 +102,7 @@ export default function TurnIndicator({
             {isMyTurn ? '🎯 YOUR TURN!' : 'CURRENT TURN'}
           </div>
           <div style={{
-            fontSize: '1.125rem',
+            fontSize: 'clamp(0.9375rem, 3vw, 1.125rem)',
             fontWeight: 'bold',
             color: 'white',
             textShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.3)',
@@ -114,9 +114,9 @@ export default function TurnIndicator({
         {/* Player Count */}
         <div style={{
           background: 'rgba(0, 0, 0, 0.3)',
-          padding: '0.5rem 0.75rem',
-          borderRadius: '1.25rem',
-          fontSize: '0.875rem',
+          padding: 'clamp(0.375rem, 1.5vh, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)',
+          borderRadius: 'clamp(0.875rem, 3vw, 1.25rem)',
+          fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)',
           fontWeight: 'bold',
           color: 'white',
         }} aria-label={`${players?.length || 0} players in game`}>
@@ -129,12 +129,12 @@ export default function TurnIndicator({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.5rem 1rem',
+          gap: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+          padding: 'clamp(0.375rem, 1.5vh, 0.5rem) clamp(0.75rem, 3vw, 1rem)',
           background: 'rgba(0, 0, 0, 0.7)',
-          borderRadius: '1.5rem',
+          borderRadius: 'clamp(1rem, 3vw, 1.5rem)',
           border: '0.125rem solid rgba(255, 255, 255, 0.3)',
-          fontSize: '0.75rem',
+          fontSize: 'clamp(0.625rem, 2vw, 0.75rem)',
           color: 'white',
         }} role="status" aria-label="Turn sequence">
           <span style={{ color: '#aaa' }}>Next:</span>

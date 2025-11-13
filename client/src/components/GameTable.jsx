@@ -28,15 +28,15 @@ export default function GameTable({
 
   return (
     <div style={{
-      padding: '30px',
+      padding: 'clamp(0.75rem, 3vw, 1.875rem)',
       background: 'rgba(0, 0, 0, 0.3)',
-      borderRadius: '12px',
+      borderRadius: 'clamp(0.5rem, 2vw, 0.75rem)',
       border: '2px solid rgba(255, 255, 255, 0.1)',
-      minHeight: '300px',
+      minHeight: 'clamp(200px, 40vh, 300px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '20px',
+      gap: 'clamp(0.75rem, 2.5vw, 1.25rem)',
     }}>
       {/* Game Info */}
       <div style={{
@@ -44,41 +44,42 @@ export default function GameTable({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '15px',
+        padding: 'clamp(0.5rem, 2vw, 0.9375rem)',
         background: 'rgba(0, 0, 0, 0.3)',
-        borderRadius: '8px',
+        borderRadius: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+        gap: 'clamp(0.5rem, 2vw, 1rem)',
       }}>
         <div>
-          <div style={{ fontSize: '14px', color: '#aaa' }}>
+          <div style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.875rem)', color: '#aaa' }}>
             Current Player:
           </div>
           <div style={{
-            fontSize: '18px',
+            fontSize: 'clamp(0.875rem, 3.5vw, 1.125rem)',
             fontWeight: 'bold',
             color: '#0ff',
-            marginTop: '5px',
+            marginTop: 'clamp(0.25rem, 1vw, 0.3125rem)',
           }}>
             {currentPlayer?.displayName || 'Unknown'}
           </div>
         </div>
 
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '14px', color: '#aaa' }}>
+          <div style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.875rem)', color: '#aaa' }}>
             Direction:
           </div>
-          <div style={{ fontSize: '24px', marginTop: '5px' }}>
+          <div style={{ fontSize: 'clamp(1.25rem, 5vw, 1.5rem)', marginTop: 'clamp(0.25rem, 1vw, 0.3125rem)' }}>
             {direction === 'clockwise' ? '→' : '←'}
           </div>
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '14px', color: '#aaa' }}>
+          <div style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.875rem)', color: '#aaa' }}>
             Active Color:
           </div>
           <div style={{
-            fontSize: '18px',
+            fontSize: 'clamp(0.875rem, 3.5vw, 1.125rem)',
             fontWeight: 'bold',
-            marginTop: '5px',
+            marginTop: 'clamp(0.25rem, 1vw, 0.3125rem)',
             color: activeColor === 'red' ? '#ff5555'
                  : activeColor === 'blue' ? '#5555ff'
                  : activeColor === 'green' ? '#55aa55'
@@ -93,16 +94,17 @@ export default function GameTable({
       {/* Card Area */}
       <div style={{
         display: 'flex',
-        gap: '40px',
+        gap: 'clamp(1rem, 4vw, 2.5rem)',
         alignItems: 'center',
         justifyContent: 'center',
+        flexWrap: 'wrap',
       }}>
         {/* Draw Pile */}
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontSize: '14px',
+            fontSize: 'clamp(0.625rem, 2.5vw, 0.875rem)',
             color: '#aaa',
-            marginBottom: '10px',
+            marginBottom: 'clamp(0.375rem, 1.5vw, 0.625rem)',
           }}>
             Draw Pile
           </div>
@@ -113,8 +115,8 @@ export default function GameTable({
           />
           {canDraw && (
             <div style={{
-              marginTop: '10px',
-              fontSize: '12px',
+              marginTop: 'clamp(0.375rem, 1.5vw, 0.625rem)',
+              fontSize: 'clamp(0.625rem, 2vw, 0.75rem)',
               color: '#0f0',
               animation: 'pulse 2s infinite',
             }}>
@@ -126,9 +128,9 @@ export default function GameTable({
         {/* Current Card */}
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontSize: '14px',
+            fontSize: 'clamp(0.625rem, 2.5vw, 0.875rem)',
             color: '#aaa',
-            marginBottom: '10px',
+            marginBottom: 'clamp(0.375rem, 1.5vw, 0.625rem)',
           }}>
             Current Card
           </div>

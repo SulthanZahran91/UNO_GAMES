@@ -168,9 +168,9 @@ export default function GameRoomActive({ game, user, gameId }) {
 
   return (
     <div style={{
-      padding: '1.25rem',
+      padding: 'clamp(0.5rem, 2vw, 1.25rem)',
       minHeight: '100vh',
-      paddingTop: '5rem', // Space for turn indicator
+      paddingTop: 'clamp(3.5rem, 10vh, 5rem)', // Responsive space for turn indicator
     }}>
       {/* Connection Status */}
       <ConnectionStatus user={user} />
@@ -192,16 +192,16 @@ export default function GameRoomActive({ game, user, gameId }) {
       {actionError && (
         <div style={{
           position: 'fixed',
-          top: '6.25rem',
+          top: 'clamp(4rem, 12vh, 6.25rem)',
           left: '50%',
           transform: 'translateX(-50%)',
           background: '#ff5555',
           color: 'white',
-          padding: '0.9375rem 1.875rem',
-          borderRadius: '0.5rem',
+          padding: 'clamp(0.625rem, 2vw, 0.9375rem) clamp(1rem, 3vw, 1.875rem)',
+          borderRadius: 'clamp(0.375rem, 1.5vw, 0.5rem)',
           boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
           zIndex: 9999,
-          fontSize: '1rem',
+          fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
           fontWeight: 'bold',
           maxWidth: '90vw',
           textAlign: 'center',
@@ -230,7 +230,7 @@ export default function GameRoomActive({ game, user, gameId }) {
       />
 
       {/* Game Table (Center Area) */}
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: 'clamp(0.75rem, 2.5vw, 1.25rem)' }}>
         <GameTable
           currentCard={game.currentCard}
           activeColor={game.activeColor}
