@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { generateDeck, shuffle, getValidStartCard } from './utils/cards.js';
 
 console.log('🔥 Initializing Firebase Functions');
 
@@ -145,6 +146,123 @@ export const joinGame = onCall(async (request) => {
       throw error;
     }
     throw new HttpsError('internal', `Failed to join game: ${error.message}`);
+  }
+});
+
+/**
+ * Start a game (host only)
+ * Deals cards and initializes game state
+ * @param {string} gameId - The game to start
+ * @returns {Promise<{success: boolean}>}
+ */
+export const startGame = onCall(async (request) => {
+  console.log('▶️ startGame called by:', request.auth?.uid);
+
+  if (!request.auth) {
+    console.error('❌ startGame: Unauthenticated request');
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const userId = request.auth.uid;
+  const { gameId } = request.data || {};
+
+  if (!gameId) {
+    console.error('❌ startGame: Missing gameId');
+    throw new HttpsError('invalid-argument', 'gameId is required');
+  }
+
+  console.log('📝 Starting game:', { gameId, userId });
+
+  try {
+    const gameRef = db.collection('games').doc(gameId);
+
+    // Use transaction to ensure atomic update
+    await db.runTransaction(async (transaction) => {
+      const gameDoc = await transaction.get(gameRef);
+
+      if (!gameDoc.exists) {
+        console.error('❌ startGame: Game not found:', gameId);
+        throw new HttpsError('not-found', 'Game not found');
+      }
+
+      const gameData = gameDoc.data();
+
+      // Validate: only host can start
+      if (gameData.hostId !== userId) {
+        console.error('❌ startGame: User is not host:', { userId, hostId: gameData.hostId });
+        throw new HttpsError('permission-denied', 'Only the host can start the game');
+      }
+
+      // Validate: game must be in waiting state
+      if (gameData.status !== 'waiting') {
+        console.error('❌ startGame: Game not in waiting state:', gameData.status);
+        throw new HttpsError('failed-precondition', 'Game has already started');
+      }
+
+      // Validate: need at least 2 players
+      if (gameData.players.length < 2) {
+        console.error('❌ startGame: Not enough players:', gameData.players.length);
+        throw new HttpsError('failed-precondition', 'Need at least 2 players to start');
+      }
+
+      console.log('✅ Validations passed. Initializing game...');
+
+      // Generate and shuffle deck
+      const deck = generateDeck();
+      shuffle(deck);
+
+      console.log('🎴 Deck shuffled, dealing cards...');
+
+      // Deal 7 cards to each player
+      let drawPileIndex = 0;
+      const updatedPlayers = gameData.players.map((player, index) => {
+        const hand = [];
+        for (let i = 0; i < 7; i++) {
+          hand.push(deck[drawPileIndex]);
+          drawPileIndex++;
+        }
+        console.log(`✅ Dealt 7 cards to ${player.displayName}`);
+        return { ...player, hand };
+      });
+
+      // Get valid starting card
+      const { card: startCard, newIndex } = getValidStartCard(deck, drawPileIndex);
+      drawPileIndex = newIndex;
+
+      console.log('🎯 Start card:', startCard);
+
+      // Initialize game state
+      const updates = {
+        status: 'in-progress',
+        players: updatedPlayers,
+        drawPile: deck,
+        drawPileIndex,
+        discardPile: [startCard],
+        currentCard: startCard,
+        activeColor: startCard.color,
+        currentPlayerIndex: 0,
+        direction: 'clockwise',
+        gameLog: [...gameData.gameLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      transaction.update(gameRef, updates);
+
+      console.log('✅ Game started successfully:', {
+        gameId,
+        players: updatedPlayers.length,
+        startCard,
+        cardsRemaining: deck.length - drawPileIndex,
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ startGame error:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', `Failed to start game: ${error.message}`);
   }
 });
 
