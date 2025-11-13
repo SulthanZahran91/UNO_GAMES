@@ -36,11 +36,11 @@ export default function ActionNotification({ gameLog }) {
           role="status"
           aria-live="polite"
           style={{
-            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%)',
+            background: 'linear-gradient(135deg, rgba(45, 45, 45, 0.95) 0%, rgba(64, 64, 64, 0.95) 100%)',
             padding: '0.75rem 1.25rem',
             borderRadius: '0.5rem',
-            boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
-            border: '0.125rem solid rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.5)',
+            border: '0.125rem solid rgba(255, 255, 255, 0.2)',
             fontSize: '0.875rem',
             fontWeight: '500',
             color: 'white',
