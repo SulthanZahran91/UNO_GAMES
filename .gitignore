@@ -17,6 +17,7 @@ client/dist/
 *-debug.log
 firebase-debug.*.log
 .runtimeconfig.json
+service-account.json
 
 # IDE
 .vscode/
