@@ -227,63 +227,10 @@ export default function ConnectionStatus({ user }) {
         <span className="refresh-button-text" style={{ display: 'none' }}>Refresh</span>
       </button>
 
-      {/* Reconnecting overlay */}
-      {connectionState === 'disconnected' && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10001,
-            padding: '2rem',
-            background: 'rgba(0, 0, 0, 0.95)',
-            borderRadius: '1rem',
-            border: '0.125rem solid #ff5555',
-            boxShadow: '0 0 2rem rgba(255, 85, 85, 0.5)',
-            textAlign: 'center',
-            minWidth: '18.75rem',
-          }}
-          role="alert"
-          aria-live="assertive"
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📡</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Connection Lost
-          </div>
-          <div style={{ fontSize: '0.875rem', color: '#aaa' }}>
-            Attempting to reconnect...
-          </div>
-          <div
-            style={{
-              marginTop: '1rem',
-              width: '100%',
-              height: '0.25rem',
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '0.125rem',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: '50%',
-                height: '100%',
-                background: '#ff5555',
-                animation: 'loading 1.5s ease-in-out infinite',
-              }}
-            />
-          </div>
-        </div>
-      )}
-
       <style>{`
         @keyframes blink {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.3; }
-        }
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(300%); }
         }
 
         /* Show text on larger screens */
