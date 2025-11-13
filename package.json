@@ -10,10 +10,12 @@
   "scripts": {
     "dev:client": "cd client && npm run dev",
     "dev:functions": "cd functions && npm run serve",
+    "build": "npm run build:client",
     "build:client": "cd client && npm run build",
-    "build:functions": "cd functions && npm run build",
     "test": "npm run test --workspaces",
     "test:client": "cd client && npm test",
-    "test:functions": "cd functions && npm test"
+    "test:functions": "cd functions && npm test",
+    "typecheck": "echo 'ℹ️  This is a JavaScript project (no TypeScript compilation needed)'",
+    "deploy": "npm run build && firebase deploy"
   }
 }
