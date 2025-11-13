@@ -36,11 +36,23 @@ export default function Card({ card, onClick, disabled = false, playable = false
   // Determine display value
   const displayValue = CARD_SYMBOLS[value] || value.toUpperCase();
 
-  // Size variants - now using rem for scalability
+  // Size variants - responsive using clamp() for mobile optimization
   const sizes = {
-    small: { width: '3.75rem', height: '5.625rem', fontSize: '0.875rem' },
-    normal: { width: '5rem', height: '7.5rem', fontSize: '1.25rem' },
-    large: { width: '7.5rem', height: '11.25rem', fontSize: '2rem' },
+    small: {
+      width: 'clamp(2.5rem, 15vw, 3.75rem)',
+      height: 'clamp(3.75rem, 22.5vw, 5.625rem)',
+      fontSize: 'clamp(0.625rem, 2vw, 0.875rem)'
+    },
+    normal: {
+      width: 'clamp(3.5rem, 18vw, 5rem)',
+      height: 'clamp(5.25rem, 27vw, 7.5rem)',
+      fontSize: 'clamp(0.875rem, 3vw, 1.25rem)'
+    },
+    large: {
+      width: 'clamp(5rem, 22vw, 7.5rem)',
+      height: 'clamp(7.5rem, 33vw, 11.25rem)',
+      fontSize: 'clamp(1.25rem, 4vw, 2rem)'
+    },
   };
 
   const cardSize = sizes[size] || sizes.normal;

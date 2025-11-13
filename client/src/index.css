@@ -57,10 +57,17 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Safe area support for notched phones */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh; /* Use dynamic viewport height for better mobile support */
+  /* Safe area support for notched phones */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .debug-panel {
@@ -199,8 +206,15 @@ input {
   }
 }
 
-/* Landscape mode on mobile */
+/* Landscape mode on mobile - optimized for gameplay */
 @media (max-height: 30rem) and (orientation: landscape) {
+  :root {
+    --touch-target-min: 2.5rem; /* Smaller touch targets in landscape */
+    --spacing-md: 0.5rem;
+    --spacing-lg: 0.75rem;
+    --spacing-xl: 1rem;
+  }
+
   button {
     min-height: 2.5rem;
     padding: 0.5rem 1rem;
@@ -209,6 +223,21 @@ input {
   input {
     min-height: 2.5rem;
     padding: 0.5rem;
+  }
+
+  /* Compact layout for landscape */
+  .container {
+    padding: var(--spacing-xs);
+  }
+}
+
+/* Additional landscape optimizations for very short screens */
+@media (max-height: 25rem) and (orientation: landscape) {
+  :root {
+    --font-xs: 0.625rem;
+    --font-sm: 0.75rem;
+    --font-base: 0.8125rem;
+    --font-lg: 0.9375rem;
   }
 }
 

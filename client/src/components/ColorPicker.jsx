@@ -21,12 +21,12 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.8)',
+        background: 'rgba(0, 0, 0, 0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10000,
-        padding: '1rem',
+        padding: 'clamp(0.75rem, 3vw, 1rem)',
       }}
       role="dialog"
       aria-modal="true"
@@ -34,9 +34,9 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
     >
       <div style={{
         background: 'linear-gradient(135deg, #2d2d2d 0%, #404040 100%)',
-        padding: '1.875rem',
-        borderRadius: '0.75rem',
-        maxWidth: '25rem',
+        padding: 'clamp(1rem, 4vw, 1.875rem)',
+        borderRadius: 'clamp(0.5rem, 2vw, 0.75rem)',
+        maxWidth: 'min(25rem, 90vw)',
         width: '100%',
         boxShadow: '0 1.25rem 3.125rem rgba(0, 0, 0, 0.8)',
         border: '2px solid rgba(255, 255, 255, 0.1)',
@@ -44,9 +44,9 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
         <h2
           id="color-picker-title"
           style={{
-            marginBottom: '1.25rem',
+            marginBottom: 'clamp(0.75rem, 3vw, 1.25rem)',
             textAlign: 'center',
-            fontSize: '1.5rem',
+            fontSize: 'clamp(1.125rem, 4vw, 1.5rem)',
           }}
         >
           Choose a Color
@@ -55,8 +55,8 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '0.9375rem',
-          marginBottom: '1.25rem',
+          gap: 'clamp(0.625rem, 2.5vw, 0.9375rem)',
+          marginBottom: 'clamp(0.75rem, 3vw, 1.25rem)',
         }}>
           {COLORS.map((color) => (
             <button
@@ -69,10 +69,10 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
               style={{
                 background: color.color,
                 color: 'white',
-                border: '0.1875rem solid white',
-                borderRadius: '0.5rem',
-                padding: '1.25rem',
-                fontSize: '1.125rem',
+                border: 'clamp(0.125rem, 0.5vw, 0.1875rem) solid white',
+                borderRadius: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+                padding: 'clamp(0.875rem, 3.5vw, 1.25rem)',
+                fontSize: 'clamp(0.9375rem, 3vw, 1.125rem)',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'transform 0.2s',
@@ -95,10 +95,10 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
               width: '100%',
               background: 'rgba(255, 255, 255, 0.2)',
               color: 'white',
-              border: '0.125rem solid rgba(255, 255, 255, 0.5)',
-              borderRadius: '0.5rem',
-              padding: '0.75rem',
-              fontSize: '0.875rem',
+              border: 'clamp(0.0625rem, 0.25vw, 0.125rem) solid rgba(255, 255, 255, 0.5)',
+              borderRadius: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+              padding: 'clamp(0.625rem, 2.5vw, 0.75rem)',
+              fontSize: 'clamp(0.8125rem, 2.5vw, 0.875rem)',
               cursor: 'pointer',
               minHeight: 'var(--touch-target-min)',
               WebkitTapHighlightColor: 'transparent',
