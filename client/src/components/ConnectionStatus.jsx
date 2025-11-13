@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getDatabase, ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 /**
  * Connection Status Component
- * Monitors Firebase connection status and displays indicator
+ * Monitors Firestore connection status and displays indicator
  */
 
 export default function ConnectionStatus({ user }) {
@@ -13,52 +14,72 @@ export default function ConnectionStatus({ user }) {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const db = getDatabase();
-    const connectedRef = ref(db, '.info/connected');
-    const userStatusRef = ref(db, `status/${user.uid}`);
+    const userStatusRef = doc(db, 'status', user.uid);
+    let pingInterval;
 
-    // Monitor connection state
-    const unsubscribe = onValue(connectedRef, (snapshot) => {
-      if (snapshot.val() === true) {
-        setConnectionState('connected');
-        setLastPing(Date.now());
+    // Monitor connection state using Firestore snapshot metadata
+    const unsubscribe = onSnapshot(
+      userStatusRef,
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        // Check if data is from cache (offline) or from server (online)
+        const isFromCache = snapshot.metadata.fromCache;
 
-        // Set user as online
-        set(userStatusRef, {
-          state: 'online',
-          last_changed: serverTimestamp(),
-        });
-
-        // When disconnected, mark as offline
-        onDisconnect(userStatusRef).set({
-          state: 'offline',
-          last_changed: serverTimestamp(),
-        });
-      } else {
+        if (!isFromCache) {
+          // We're getting data from the server, so we're online
+          setConnectionState('connected');
+          setLastPing(Date.now());
+        } else if (snapshot.metadata.hasPendingWrites) {
+          // We have pending writes, which means we're likely offline
+          setConnectionState('disconnected');
+        }
+      },
+      (error) => {
+        console.error('Connection monitoring error:', error);
         setConnectionState('disconnected');
       }
+    );
+
+    // Initial status set
+    setDoc(userStatusRef, {
+      state: 'online',
+      last_changed: serverTimestamp(),
+    }, { merge: true }).catch(err => {
+      console.error('Failed to set initial status:', err);
+      setConnectionState('disconnected');
     });
 
-    // Ping interval to check latency
-    const pingInterval = setInterval(() => {
-      if (connectionState === 'connected') {
-        const pingStart = Date.now();
-        set(ref(db, `ping/${user.uid}`), {
-          timestamp: serverTimestamp(),
-        }).then(() => {
+    // Ping interval to check latency and maintain connection status
+    pingInterval = setInterval(() => {
+      const pingStart = Date.now();
+      setDoc(userStatusRef, {
+        state: 'online',
+        last_changed: serverTimestamp(),
+      }, { merge: true })
+        .then(() => {
           const latency = Date.now() - pingStart;
           setLastPing(latency);
-        }).catch(() => {
+          setConnectionState('connected');
+        })
+        .catch((error) => {
+          console.error('Ping failed:', error);
           setConnectionState('disconnected');
         });
-      }
     }, 5000); // Check every 5 seconds
 
     return () => {
       unsubscribe();
       clearInterval(pingInterval);
+
+      // Set user as offline when component unmounts
+      setDoc(userStatusRef, {
+        state: 'offline',
+        last_changed: serverTimestamp(),
+      }, { merge: true }).catch(err => {
+        console.error('Failed to set offline status:', err);
+      });
     };
-  }, [user?.uid, connectionState]);
+  }, [user?.uid]);
 
   const getStatusColor = () => {
     if (connectionState === 'disconnected') return '#ff5555';
