@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -10,6 +10,8 @@ import { db } from '../config/firebase';
 export default function ConnectionStatus({ user }) {
   const [connectionState, setConnectionState] = useState('checking'); // 'connected', 'disconnected', 'checking'
   const [lastPing, setLastPing] = useState(null);
+  const lastServerResponseRef = useRef(Date.now());
+  const connectionTimeoutRef = useRef(null);
 
   const handleHardRefresh = () => {
     // Clear cache and reload
@@ -36,12 +38,35 @@ export default function ConnectionStatus({ user }) {
         const isFromCache = snapshot.metadata.fromCache;
 
         if (!isFromCache) {
-          // We're getting data from the server, so we're online
+          // We're getting data from the server - definitely online
           setConnectionState('connected');
           setLastPing(Date.now());
+          lastServerResponseRef.current = Date.now();
+
+          // Clear any pending timeout
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
         } else if (snapshot.metadata.hasPendingWrites) {
-          // We have pending writes, which means we're likely offline
-          setConnectionState('disconnected');
+          // We have pending writes, but don't immediately mark as disconnected
+          // Set a timeout to check if they're taking too long
+          if (!connectionTimeoutRef.current) {
+            connectionTimeoutRef.current = setTimeout(() => {
+              // Check if we still haven't gotten a server response
+              const timeSinceLastResponse = Date.now() - lastServerResponseRef.current;
+              if (timeSinceLastResponse > 8000) { // 8 seconds threshold
+                setConnectionState('disconnected');
+              }
+              connectionTimeoutRef.current = null;
+            }, 5000); // Wait 5 seconds before checking
+          }
+        } else {
+          // Data is from cache but no pending writes
+          // This means last sync succeeded - we're likely online
+          if (connectionState === 'disconnected') {
+            setConnectionState('connected');
+          }
         }
       },
       (error) => {
@@ -70,6 +95,13 @@ export default function ConnectionStatus({ user }) {
           const latency = Date.now() - pingStart;
           setLastPing(latency);
           setConnectionState('connected');
+          lastServerResponseRef.current = Date.now();
+
+          // Clear any pending timeout
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
         })
         .catch((error) => {
           console.error('Ping failed:', error);
@@ -80,6 +112,12 @@ export default function ConnectionStatus({ user }) {
     return () => {
       unsubscribe();
       clearInterval(pingInterval);
+
+      // Clear any pending timeout
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
 
       // Set user as offline when component unmounts
       setDoc(userStatusRef, {
