@@ -57,13 +57,14 @@ export default function TurnIndicator({
       alignItems: 'center',
       gap: 'clamp(0.375rem, 1.5vh, 0.75rem)',
       maxWidth: '95vw',
+      width: 'fit-content',
     }}>
       {/* Main Turn Indicator */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 'clamp(0.5rem, 2vw, 0.9375rem)',
-        padding: 'clamp(0.625rem, 2vh, 0.9375rem) clamp(1rem, 4vw, 1.875rem)',
+        gap: 'clamp(0.375rem, 2vw, 0.75rem)',
+        padding: 'clamp(0.5rem, 2vh, 0.75rem) clamp(0.75rem, 3vw, 1.25rem)',
         background: isMyTurn
           ? 'linear-gradient(135deg, rgba(0, 255, 0, 0.9) 0%, rgba(0, 200, 0, 0.95) 100%)'
           : 'linear-gradient(135deg, rgba(255, 170, 0, 0.9) 0%, rgba(255, 140, 0, 0.95) 100%)',
@@ -76,11 +77,13 @@ export default function TurnIndicator({
         backgroundImage: isMyTurn
           ? 'repeating-linear-gradient(45deg, transparent, transparent 0.625rem, rgba(255, 255, 255, 0.1) 0.625rem, rgba(255, 255, 255, 0.1) 1.25rem)'
           : 'none',
+        maxWidth: '100%',
       }}>
         {/* Direction Indicator */}
         <div style={{
-          fontSize: 'clamp(1rem, 3vw, 1.5rem)',
+          fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
           animation: 'rotate 2s linear infinite',
+          flexShrink: 0,
         }} role="img" aria-label={direction === 'clockwise' ? 'Clockwise direction' : 'Counter-clockwise direction'}>
           {direction === 'clockwise' ? '↻' : '↺'}
         </div>
@@ -90,22 +93,29 @@ export default function TurnIndicator({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          minWidth: 0,
+          flex: 1,
         }}>
           <div style={{
-            fontSize: 'clamp(0.625rem, 2vw, 0.75rem)',
+            fontSize: 'clamp(0.5rem, 1.8vw, 0.7rem)',
             fontWeight: 'bold',
             textTransform: 'uppercase',
             letterSpacing: '0.0625rem',
             color: 'white',
             textShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.3)',
+            whiteSpace: 'nowrap',
           }}>
             {isMyTurn ? '🎯 YOUR TURN!' : 'CURRENT TURN'}
           </div>
           <div style={{
-            fontSize: 'clamp(0.9375rem, 3vw, 1.125rem)',
+            fontSize: 'clamp(0.8rem, 2.5vw, 1rem)',
             fontWeight: 'bold',
             color: 'white',
             textShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.3)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '100%',
           }}>
             {currentPlayer.displayName}
           </div>
@@ -114,11 +124,13 @@ export default function TurnIndicator({
         {/* Player Count */}
         <div style={{
           background: 'rgba(0, 0, 0, 0.3)',
-          padding: 'clamp(0.375rem, 1.5vh, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)',
-          borderRadius: 'clamp(0.875rem, 3vw, 1.25rem)',
-          fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)',
+          padding: 'clamp(0.25rem, 1.5vh, 0.4rem) clamp(0.375rem, 2vw, 0.625rem)',
+          borderRadius: 'clamp(0.75rem, 3vw, 1rem)',
+          fontSize: 'clamp(0.625rem, 2vw, 0.8rem)',
           fontWeight: 'bold',
           color: 'white',
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
         }} aria-label={`${players?.length || 0} players in game`}>
           {players?.length || 0} Players
         </div>
@@ -129,31 +141,45 @@ export default function TurnIndicator({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'clamp(0.375rem, 1.5vw, 0.5rem)',
-          padding: 'clamp(0.375rem, 1.5vh, 0.5rem) clamp(0.75rem, 3vw, 1rem)',
+          gap: 'clamp(0.25rem, 1.5vw, 0.4rem)',
+          padding: 'clamp(0.25rem, 1.5vh, 0.4rem) clamp(0.5rem, 2.5vw, 0.8rem)',
           background: 'rgba(0, 0, 0, 0.7)',
-          borderRadius: 'clamp(1rem, 3vw, 1.5rem)',
+          borderRadius: 'clamp(0.75rem, 3vw, 1.25rem)',
           border: '0.125rem solid rgba(255, 255, 255, 0.3)',
-          fontSize: 'clamp(0.625rem, 2vw, 0.75rem)',
+          fontSize: 'clamp(0.5rem, 1.8vw, 0.7rem)',
           color: 'white',
+          maxWidth: '95vw',
+          overflow: 'hidden',
         }} role="status" aria-label="Turn sequence">
-          <span style={{ color: '#aaa' }}>Next:</span>
-          {turnSequence.slice(1).map((player, index) => (
-            <span key={player.uid} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-            }}>
-              {index > 0 && <span style={{ color: '#666' }}>→</span>}
-              <span style={{
-                fontWeight: 'bold',
-                color: player.isMe ? '#0f0' : 'white',
-                textShadow: player.isMe ? '0 0 0.625rem rgba(0, 255, 0, 0.8)' : 'none',
+          <span style={{ color: '#aaa', flexShrink: 0 }}>Next:</span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'clamp(0.25rem, 1vw, 0.4rem)',
+            overflow: 'hidden',
+            minWidth: 0,
+          }}>
+            {turnSequence.slice(1).map((player, index) => (
+              <span key={player.uid} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.2rem',
+                minWidth: 0,
               }}>
-                {player.isMe ? 'You' : player.displayName}
+                {index > 0 && <span style={{ color: '#666', flexShrink: 0 }}>→</span>}
+                <span style={{
+                  fontWeight: 'bold',
+                  color: player.isMe ? '#0f0' : 'white',
+                  textShadow: player.isMe ? '0 0 0.625rem rgba(0, 255, 0, 0.8)' : 'none',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {player.isMe ? 'You' : player.displayName}
+                </span>
               </span>
-            </span>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
