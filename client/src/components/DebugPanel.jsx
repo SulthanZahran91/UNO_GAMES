@@ -24,19 +24,21 @@ export default function DebugPanel({ enabled = true, data = {} }) {
         onClick={() => setIsVisible(true)}
         style={{
           position: 'fixed',
-          bottom: 10,
-          right: 10,
+          bottom: 'max(10px, env(safe-area-inset-bottom, 10px))',
+          left: 'max(10px, env(safe-area-inset-left, 10px))',
           zIndex: 9999,
-          padding: '8px 16px',
+          padding: '6px 10px',
           background: 'rgba(0, 0, 0, 0.7)',
           color: '#0f0',
           border: '1px solid #0f0',
           borderRadius: '4px',
           cursor: 'pointer',
-          fontSize: '12px',
+          fontSize: '10px',
+          minHeight: 'auto',
+          minWidth: 'auto',
         }}
       >
-        Show Debug
+        🐛
       </button>
     );
   }
