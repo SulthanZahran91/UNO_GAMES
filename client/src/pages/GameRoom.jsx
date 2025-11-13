@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useGame } from '../hooks/useGame';
 import { startGame } from '../services/gameFunctions';
+import GameRoomActive from './GameRoomActive';
 
 console.log('🎯 GameRoom component loaded');
 
@@ -247,20 +248,7 @@ export default function GameRoom({ user }) {
         )}
 
         {game.status === 'in-progress' && (
-          <div style={{
-            background: 'rgba(85, 255, 85, 0.1)',
-            border: '2px solid rgba(85, 255, 85, 0.3)',
-            padding: '20px',
-            borderRadius: '8px',
-            textAlign: 'center',
-          }}>
-            <h2 style={{ marginBottom: '10px', fontSize: '18px' }}>
-              🎮 Game In Progress!
-            </h2>
-            <p style={{ fontSize: '14px', color: '#aaa' }}>
-              Game functionality will be implemented next...
-            </p>
-          </div>
+          <GameRoomActive game={game} user={user} gameId={gameId} />
         )}
 
         {game.status === 'finished' && (
