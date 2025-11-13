@@ -33,12 +33,13 @@ export default function ColorPicker({ onColorSelect, onCancel }) {
       aria-labelledby="color-picker-title"
     >
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #2d2d2d 0%, #404040 100%)',
         padding: '1.875rem',
         borderRadius: '0.75rem',
         maxWidth: '25rem',
         width: '100%',
-        boxShadow: '0 1.25rem 3.125rem rgba(0, 0, 0, 0.5)',
+        boxShadow: '0 1.25rem 3.125rem rgba(0, 0, 0, 0.8)',
+        border: '2px solid rgba(255, 255, 255, 0.1)',
       }}>
         <h2
           id="color-picker-title"
