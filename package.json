@@ -1,0 +1,19 @@
+{
+  "name": "uno-game",
+  "version": "1.0.0",
+  "description": "Real-time multiplayer UNO game with Firebase",
+  "private": true,
+  "workspaces": [
+    "client",
+    "functions"
+  ],
+  "scripts": {
+    "dev:client": "cd client && npm run dev",
+    "dev:functions": "cd functions && npm run serve",
+    "build:client": "cd client && npm run build",
+    "build:functions": "cd functions && npm run build",
+    "test": "npm run test --workspaces",
+    "test:client": "cd client && npm test",
+    "test:functions": "cd functions && npm test"
+  }
+}
