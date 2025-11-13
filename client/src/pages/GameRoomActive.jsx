@@ -6,6 +6,7 @@ import OpponentDisplay from '../components/OpponentDisplay';
 import TurnIndicator from '../components/TurnIndicator';
 import ActionNotification from '../components/ActionNotification';
 import CardAnimation from '../components/CardAnimation';
+import ConnectionStatus from '../components/ConnectionStatus';
 import { playCard as playCardService, drawCard as drawCardService } from '../services/gameFunctions';
 
 /**
@@ -167,16 +168,21 @@ export default function GameRoomActive({ game, user, gameId }) {
 
   return (
     <div style={{
-      padding: '20px',
+      padding: '1.25rem',
       minHeight: '100vh',
-      paddingTop: '80px', // Space for turn indicator
+      paddingTop: '5rem', // Space for turn indicator
     }}>
+      {/* Connection Status */}
+      <ConnectionStatus user={user} />
+
       {/* Turn Indicator */}
       <TurnIndicator
         currentPlayer={currentPlayer}
         isMyTurn={isMyTurn}
         direction={game.direction}
         players={game.players}
+        currentPlayerIndex={game.currentPlayerIndex}
+        myUid={user?.uid}
       />
 
       {/* Action Notifications */}
@@ -186,18 +192,20 @@ export default function GameRoomActive({ game, user, gameId }) {
       {actionError && (
         <div style={{
           position: 'fixed',
-          top: '80px',
+          top: '6.25rem',
           left: '50%',
           transform: 'translateX(-50%)',
           background: '#ff5555',
           color: 'white',
-          padding: '15px 30px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          padding: '0.9375rem 1.875rem',
+          borderRadius: '0.5rem',
+          boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
           zIndex: 9999,
-          fontSize: '16px',
+          fontSize: '1rem',
           fontWeight: 'bold',
-        }}>
+          maxWidth: '90vw',
+          textAlign: 'center',
+        }} role="alert">
           ❌ {actionError}
         </div>
       )}

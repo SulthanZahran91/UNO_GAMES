@@ -34,14 +34,14 @@ export default function PlayerHand({
 
   return (
     <div style={{
-      padding: '20px',
+      padding: '1.25rem',
       background: 'rgba(0, 0, 0, 0.2)',
-      borderRadius: '12px',
-      border: '2px solid rgba(255, 255, 255, 0.1)',
+      borderRadius: '0.75rem',
+      border: '0.125rem solid rgba(255, 255, 255, 0.1)',
     }}>
       <h3 style={{
-        marginBottom: '15px',
-        fontSize: '16px',
+        marginBottom: '0.9375rem',
+        fontSize: '1rem',
         color: '#aaa',
         textAlign: 'center',
       }}>
@@ -52,9 +52,9 @@ export default function PlayerHand({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'flex-end',
-        gap: '10px',
+        gap: '0.625rem',
         flexWrap: 'wrap',
-        minHeight: '140px',
+        minHeight: '8.75rem',
       }}>
         {hand.map((card, index) => {
           // Check if this card can be played
@@ -78,12 +78,12 @@ export default function PlayerHand({
 
       {disabled && (
         <div style={{
-          marginTop: '15px',
-          padding: '10px',
+          marginTop: '0.9375rem',
+          padding: '0.75rem',
           background: 'rgba(255, 170, 0, 0.2)',
-          borderRadius: '6px',
+          borderRadius: '0.375rem',
           textAlign: 'center',
-          fontSize: '14px',
+          fontSize: '0.875rem',
           color: '#ffaa00',
         }}>
           ⏳ Wait for your turn

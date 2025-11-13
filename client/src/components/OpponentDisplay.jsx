@@ -3,6 +3,7 @@ import CardBack from './CardBack';
 /**
  * Opponent Display Component
  * Shows other players with their card counts and status
+ * Now with responsive positioning and touch-friendly design
  */
 
 const PLAYER_COLORS = ['#ff5555', '#5555ff', '#55aa55', '#ffaa00'];
@@ -16,7 +17,7 @@ export default function OpponentDisplay({
   // Get opponents (all players except me)
   const opponents = players.filter(p => p.uid !== myUid);
 
-  // Calculate opponent positions based on player count
+  // Calculate opponent positions based on player count and screen size
   const getPosition = (index, total) => {
     if (total === 1) return 'top';
     if (total === 2) return index === 0 ? 'top-left' : 'top-right';
@@ -27,74 +28,108 @@ export default function OpponentDisplay({
   };
 
   return (
-    <div style={{
+    <div className="opponent-display-container" style={{
       position: 'relative',
       width: '100%',
-      height: '200px',
-      marginBottom: '20px',
+      minHeight: '12.5rem',
+      marginBottom: '1.25rem',
+      display: 'flex',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: '1rem',
+      padding: '0.5rem',
     }}>
       {opponents.map((opponent, index) => {
         const position = getPosition(index, opponents.length);
         const isCurrentPlayer = players[currentPlayerIndex]?.uid === opponent.uid;
         const playerIndex = players.findIndex(p => p.uid === opponent.uid);
 
-        // Position styles
+        // Position styles - responsive using percentages and viewport units
         const positionStyles = {
-          'top': { top: '0', left: '50%', transform: 'translateX(-50%)' },
-          'top-left': { top: '0', left: '20%' },
-          'top-right': { top: '0', right: '20%' },
-          'left': { top: '50%', left: '0', transform: 'translateY(-50%)' },
-          'right': { top: '50%', right: '0', transform: 'translateY(-50%)' },
+          'top': {
+            position: 'absolute',
+            top: '0',
+            left: '50%',
+            transform: 'translateX(-50%)',
+          },
+          'top-left': {
+            position: 'absolute',
+            top: '0',
+            left: 'clamp(0.5rem, 10%, 5rem)',
+          },
+          'top-right': {
+            position: 'absolute',
+            top: '0',
+            right: 'clamp(0.5rem, 10%, 5rem)',
+          },
+          'left': {
+            position: 'absolute',
+            top: '50%',
+            left: '0',
+            transform: 'translateY(-50%)',
+          },
+          'right': {
+            position: 'absolute',
+            top: '50%',
+            right: '0',
+            transform: 'translateY(-50%)',
+          },
         };
 
         return (
           <div
             key={opponent.uid}
+            className="opponent-card"
             style={{
-              position: 'absolute',
               ...positionStyles[position],
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '10px',
-              padding: '15px',
+              gap: '0.625rem',
+              padding: '0.9375rem',
               background: isCurrentPlayer
                 ? 'linear-gradient(135deg, rgba(0, 255, 0, 0.2) 0%, rgba(0, 200, 0, 0.3) 100%)'
                 : 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '12px',
-              border: isCurrentPlayer ? '3px solid #0f0' : '2px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '0.75rem',
+              border: isCurrentPlayer ? '0.1875rem solid #0f0' : '0.125rem solid rgba(255, 255, 255, 0.2)',
               boxShadow: isCurrentPlayer
-                ? '0 0 20px rgba(0, 255, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)'
-                : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                ? '0 0 1.25rem rgba(0, 255, 0, 0.5), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)'
+                : '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
               transition: 'all 0.3s ease',
-              minWidth: '140px',
+              minWidth: '8.75rem',
               animation: isCurrentPlayer ? 'pulse 2s infinite' : 'none',
             }}
+            role="status"
+            aria-label={`${opponent.displayName}, ${opponent.hand?.length || 0} cards${isCurrentPlayer ? ', current turn' : ''}`}
           >
             {/* Player Avatar/Icon */}
             <div style={{
-              width: '50px',
-              height: '50px',
+              width: '3.125rem',
+              height: '3.125rem',
+              minWidth: '3.125rem',
+              minHeight: '3.125rem',
               borderRadius: '50%',
               background: PLAYER_COLORS[playerIndex % PLAYER_COLORS.length],
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
+              fontSize: '1.5rem',
               fontWeight: 'bold',
               color: 'white',
-              border: '3px solid white',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}>
+              border: '0.1875rem solid white',
+              boxShadow: '0 0.125rem 0.5rem rgba(0, 0, 0, 0.3)',
+            }} aria-hidden="true">
               {opponent.displayName.charAt(0).toUpperCase()}
             </div>
 
             {/* Player Name */}
             <div style={{
-              fontSize: '14px',
+              fontSize: '0.875rem',
               fontWeight: 'bold',
               textAlign: 'center',
               color: isCurrentPlayer ? '#0f0' : 'white',
+              wordBreak: 'break-word',
+              maxWidth: '100%',
             }}>
               {opponent.displayName}
             </div>
@@ -103,11 +138,11 @@ export default function OpponentDisplay({
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '0.5rem',
             }}>
               <CardBack size="small" />
               <div style={{
-                fontSize: '20px',
+                fontSize: '1.25rem',
                 fontWeight: 'bold',
                 color: opponent.hand?.length === 1 ? '#ff5555' : 'white',
               }}>
@@ -120,12 +155,12 @@ export default function OpponentDisplay({
               <div style={{
                 background: '#ff5555',
                 color: 'white',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '0.75rem',
+                fontSize: '0.75rem',
                 fontWeight: 'bold',
                 animation: 'blink 1s infinite',
-              }}>
+              }} role="alert">
                 UNO!
               </div>
             )}
@@ -133,7 +168,7 @@ export default function OpponentDisplay({
             {/* Turn Indicator */}
             {isCurrentPlayer && (
               <div style={{
-                fontSize: '12px',
+                fontSize: '0.75rem',
                 color: '#0f0',
                 fontWeight: 'bold',
                 textAlign: 'center',
@@ -145,15 +180,42 @@ export default function OpponentDisplay({
         );
       })}
 
-      {/* Add keyframe animations */}
+      {/* Add keyframe animations and responsive styles */}
       <style>{`
         @keyframes pulse {
-          0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3); }
-          50% { box-shadow: 0 0 40px rgba(0, 255, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.3); }
+          0%, 100% { box-shadow: 0 0 1.25rem rgba(0, 255, 0, 0.5), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3); }
+          50% { box-shadow: 0 0 2.5rem rgba(0, 255, 0, 0.8), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3); }
         }
         @keyframes blink {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
+        }
+
+        /* Mobile: Stack opponents in a row */
+        @media (max-width: 48rem) {
+          .opponent-display-container {
+            min-height: auto !important;
+            padding: 0.5rem !important;
+          }
+
+          .opponent-card {
+            position: relative !important;
+            transform: none !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            min-width: 7rem !important;
+            padding: 0.75rem !important;
+          }
+        }
+
+        /* Very small screens - compact layout */
+        @media (max-width: 30rem) {
+          .opponent-card {
+            min-width: 6rem !important;
+            padding: 0.5rem !important;
+            gap: 0.375rem !important;
+          }
         }
       `}</style>
     </div>

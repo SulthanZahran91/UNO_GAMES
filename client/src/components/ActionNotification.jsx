@@ -21,28 +21,32 @@ export default function ActionNotification({ gameLog }) {
   return (
     <div style={{
       position: 'fixed',
-      top: '80px',
-      right: '20px',
+      top: '5rem',
+      right: '1.25rem',
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px',
+      gap: '0.625rem',
       zIndex: 1000,
-      maxWidth: '350px',
+      maxWidth: '21.875rem',
+      pointerEvents: 'none',
     }}>
       {recentActions.map((action, index) => (
         <div
           key={`${action}-${index}`}
+          role="status"
+          aria-live="polite"
           style={{
             background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%)',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            fontSize: '14px',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
+            border: '0.125rem solid rgba(255, 255, 255, 0.3)',
+            fontSize: '0.875rem',
             fontWeight: '500',
             color: 'white',
             animation: `slideIn 0.3s ease-out ${index * 0.1}s both`,
             opacity: 1 - (index * 0.2),
+            wordBreak: 'break-word',
           }}
         >
           {action.includes('🏆') && '🏆 '}
@@ -63,6 +67,16 @@ export default function ActionNotification({ gameLog }) {
           to {
             transform: translateX(0);
             opacity: 1;
+          }
+        }
+
+        /* Mobile responsive - move to top */
+        @media (max-width: 48rem) {
+          div[style*="top: 5rem"] {
+            top: 6.5rem !important;
+            right: 0.5rem !important;
+            left: 0.5rem !important;
+            max-width: calc(100vw - 1rem) !important;
           }
         }
       `}</style>
