@@ -2,6 +2,9 @@ import { useState } from 'react';
 import GameTable from '../components/GameTable';
 import PlayerHand from '../components/PlayerHand';
 import ColorPicker from '../components/ColorPicker';
+import OpponentDisplay from '../components/OpponentDisplay';
+import TurnIndicator from '../components/TurnIndicator';
+import ActionNotification from '../components/ActionNotification';
 import { playCard as playCardService, drawCard as drawCardService } from '../services/gameFunctions';
 
 /**
@@ -102,12 +105,27 @@ export default function GameRoomActive({ game, user, gameId }) {
   const drawPileCount = game.drawPile?.length - game.drawPileIndex || 0;
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{
+      padding: '20px',
+      minHeight: '100vh',
+      paddingTop: '80px', // Space for turn indicator
+    }}>
+      {/* Turn Indicator */}
+      <TurnIndicator
+        currentPlayer={currentPlayer}
+        isMyTurn={isMyTurn}
+        direction={game.direction}
+        players={game.players}
+      />
+
+      {/* Action Notifications */}
+      <ActionNotification gameLog={game.gameLog} />
+
       {/* Error Display */}
       {actionError && (
         <div style={{
           position: 'fixed',
-          top: '20px',
+          top: '80px',
           left: '50%',
           transform: 'translateX(-50%)',
           background: '#ff5555',
@@ -134,6 +152,14 @@ export default function GameRoomActive({ game, user, gameId }) {
         />
       )}
 
+      {/* Opponent Display */}
+      <OpponentDisplay
+        players={game.players}
+        currentPlayerIndex={game.currentPlayerIndex}
+        myUid={user?.uid}
+        direction={game.direction}
+      />
+
       {/* Game Table (Center Area) */}
       <div style={{ marginBottom: '20px' }}>
         <GameTable
@@ -157,29 +183,6 @@ export default function GameRoomActive({ game, user, gameId }) {
           activeColor={game.activeColor}
           disabled={!isMyTurn || actionLoading}
         />
-      )}
-
-      {/* Game Log */}
-      {game.gameLog && game.gameLog.length > 0 && (
-        <div style={{
-          marginTop: '20px',
-          background: 'rgba(0, 0, 0, 0.3)',
-          padding: '15px',
-          borderRadius: '8px',
-          maxHeight: '150px',
-          overflowY: 'auto',
-        }}>
-          <h3 style={{ marginBottom: '10px', fontSize: '14px', color: '#aaa' }}>
-            📜 Game Log
-          </h3>
-          <div style={{ fontSize: '12px', color: '#ccc' }}>
-            {game.gameLog.slice(-10).reverse().map((log, index) => (
-              <div key={index} style={{ marginBottom: '3px' }}>
-                • {log}
-              </div>
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );
