@@ -1,6 +1,9 @@
+import { useState } from 'react';
+
 /**
  * UNO Card Component
  * Displays a single UNO card with proper styling and colors
+ * Optimized for touch interactions
  */
 
 const CARD_COLORS = {
@@ -20,6 +23,8 @@ const CARD_SYMBOLS = {
 };
 
 export default function Card({ card, onClick, disabled = false, playable = false, size = 'normal' }) {
+  const [isPressed, setIsPressed] = useState(false);
+
   if (!card) {
     console.warn('⚠️ Card component: No card provided');
     return null;
@@ -31,11 +36,11 @@ export default function Card({ card, onClick, disabled = false, playable = false
   // Determine display value
   const displayValue = CARD_SYMBOLS[value] || value.toUpperCase();
 
-  // Size variants
+  // Size variants - now using rem for scalability
   const sizes = {
-    small: { width: '60px', height: '90px', fontSize: '14px' },
-    normal: { width: '80px', height: '120px', fontSize: '20px' },
-    large: { width: '120px', height: '180px', fontSize: '32px' },
+    small: { width: '3.75rem', height: '5.625rem', fontSize: '0.875rem' },
+    normal: { width: '5rem', height: '7.5rem', fontSize: '1.25rem' },
+    large: { width: '7.5rem', height: '11.25rem', fontSize: '2rem' },
   };
 
   const cardSize = sizes[size] || sizes.normal;
@@ -47,18 +52,41 @@ export default function Card({ card, onClick, disabled = false, playable = false
     }
   };
 
+  const handleTouchStart = () => {
+    if (!disabled && onClick) {
+      setIsPressed(true);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsPressed(false);
+  };
+
   return (
     <div
       onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      role={onClick ? 'button' : 'img'}
+      aria-label={`${color} ${value} card${playable ? ', playable' : ''}${disabled ? ', disabled' : ''}`}
+      tabIndex={onClick && !disabled ? 0 : -1}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       style={{
         width: cardSize.width,
         height: cardSize.height,
+        minWidth: cardSize.width,
+        minHeight: cardSize.height,
         background: bgColor,
-        borderRadius: '8px',
-        border: playable ? '3px solid #0f0' : '2px solid rgba(255, 255, 255, 0.3)',
+        borderRadius: '0.5rem',
+        border: playable ? '0.1875rem solid #0f0' : '0.125rem solid rgba(255, 255, 255, 0.3)',
         boxShadow: playable
-          ? '0 0 15px rgba(0, 255, 0, 0.5)'
-          : '0 4px 6px rgba(0, 0, 0, 0.3)',
+          ? '0 0 0.9375rem rgba(0, 255, 0, 0.5)'
+          : '0 0.25rem 0.375rem rgba(0, 0, 0, 0.3)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -67,17 +95,9 @@ export default function Card({ card, onClick, disabled = false, playable = false
         transition: 'all 0.2s ease',
         position: 'relative',
         userSelect: 'none',
-        transform: playable ? 'translateY(-8px)' : 'translateY(0)',
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled && onClick) {
-          e.currentTarget.style.transform = 'translateY(-8px) scale(1.05)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!disabled && onClick) {
-          e.currentTarget.style.transform = playable ? 'translateY(-8px)' : 'translateY(0)';
-        }
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation',
+        transform: (playable || isPressed) ? 'translateY(-0.5rem) scale(1.05)' : 'translateY(0)',
       }}
     >
       {/* Card background pattern */}
@@ -88,7 +108,7 @@ export default function Card({ card, onClick, disabled = false, playable = false
         right: '10%',
         bottom: '10%',
         background: 'white',
-        borderRadius: '6px',
+        borderRadius: '0.375rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -107,12 +127,12 @@ export default function Card({ card, onClick, disabled = false, playable = false
       {/* Small corner indicators */}
       <div style={{
         position: 'absolute',
-        top: '5px',
-        left: '5px',
-        fontSize: '10px',
+        top: '0.3125rem',
+        left: '0.3125rem',
+        fontSize: '0.625rem',
         color: 'white',
         fontWeight: 'bold',
-      }}>
+      }} aria-hidden="true">
         {value === 'wild' || value === 'draw4' ? '★' : displayValue}
       </div>
     </div>
