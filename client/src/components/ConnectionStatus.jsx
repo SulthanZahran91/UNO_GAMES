@@ -11,6 +11,16 @@ export default function ConnectionStatus({ user }) {
   const [connectionState, setConnectionState] = useState('checking'); // 'connected', 'disconnected', 'checking'
   const [lastPing, setLastPing] = useState(null);
 
+  const handleHardRefresh = () => {
+    // Clear cache and reload
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+    window.location.reload();
+  };
+
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -148,6 +158,37 @@ export default function ConnectionStatus({ user }) {
         {getStatusText()}
       </span>
 
+      {/* Hard Refresh Button */}
+      <button
+        onClick={handleHardRefresh}
+        style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          border: '0.0625rem solid rgba(255, 255, 255, 0.2)',
+          borderRadius: '0.5rem',
+          padding: '0.25rem 0.5rem',
+          color: 'white',
+          fontSize: '0.75rem',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+        title="Hard refresh - clears cache and reloads"
+        aria-label="Hard refresh page"
+      >
+        <span style={{ fontSize: '0.875rem' }}>🔄</span>
+        <span className="refresh-button-text" style={{ display: 'none' }}>Refresh</span>
+      </button>
+
       {/* Reconnecting overlay */}
       {connectionState === 'disconnected' && (
         <div
@@ -210,6 +251,9 @@ export default function ConnectionStatus({ user }) {
         /* Show text on larger screens */
         @media (min-width: 48rem) {
           .connection-status-text {
+            display: inline !important;
+          }
+          .refresh-button-text {
             display: inline !important;
           }
         }
