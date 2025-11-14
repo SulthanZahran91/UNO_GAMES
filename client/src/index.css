@@ -74,7 +74,7 @@ body {
   position: fixed;
   bottom: env(safe-area-inset-bottom, 0);
   left: env(safe-area-inset-left, 0);
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   color: #0f0;
   font-family: monospace;
   font-size: var(--font-xs);
@@ -84,6 +84,7 @@ body {
   overflow-y: auto;
   border-top-right-radius: var(--radius-md);
   border-top-left-radius: 0;
+  border: 1px solid rgba(0, 255, 0, 0.3);
   z-index: 9999;
 }
 
@@ -96,6 +97,33 @@ body {
 .debug-panel pre {
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* Mobile optimization for debug panel */
+@media (max-width: 48rem) {
+  .debug-panel {
+    max-width: 85vw;
+    max-height: 40vh;
+    padding: var(--spacing-sm);
+    font-size: 0.6rem;
+  }
+
+  .debug-panel h3 {
+    font-size: 0.7rem;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .debug-panel button {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .debug-panel {
+    max-width: 80vw;
+    max-height: 35vh;
+  }
 }
 
 .container {
