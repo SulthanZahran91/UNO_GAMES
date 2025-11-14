@@ -34,18 +34,21 @@ Project Console: https://console.firebase.google.com/project/your-project/overvi
 ## What the Security Rules Do
 
 ### Main Game Document (`/games/{gameId}`)
-- **Read**: Any authenticated player who is in the game
+- **Read**: Any authenticated user (game state is public to players)
 - **Write**: Only Cloud Functions (server-side)
 
 ### Player Hand Subcollection (`/games/{gameId}/players/{playerId}`)
-- **Read**: Only the player whose hand it is
+- **Read**: Only the player whose hand it is (UID must match)
 - **Write**: Only Cloud Functions (server-side)
 
 This ensures:
+- Players can see game state (current card, whose turn, etc.)
 - Players can see their own cards
-- Players cannot see opponent cards
+- Players **cannot** see opponent cards (protected by subcollection rules)
 - Players cannot cheat by modifying game state
 - All game logic is enforced server-side
+
+**Note**: The main game document only contains public information like card counts, not the actual cards. The sensitive hand data is in the protected subcollection.
 
 ## Troubleshooting
 
