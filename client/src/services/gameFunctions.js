@@ -108,3 +108,23 @@ export async function drawCard(gameId) {
     throw error;
   }
 }
+
+/**
+ * Skip turn (after drawing a card)
+ * @param {string} gameId - The game ID
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function skipTurn(gameId) {
+  console.log('⏭️ Calling skipTurn function:', { gameId });
+
+  try {
+    const skipTurnFn = httpsCallable(functions, 'skipTurn');
+    const result = await skipTurnFn({ gameId });
+
+    console.log('✅ skipTurn success:', result.data);
+    return result.data;
+  } catch (error) {
+    console.error('❌ skipTurn error:', error);
+    throw error;
+  }
+}

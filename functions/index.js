@@ -257,6 +257,8 @@ export const startGame = onCall(async (request) => {
         activeColor: startCard.color,
         currentPlayerIndex: 0,
         direction: 'clockwise',
+        pendingDrawCount: 0, // Track stacked draw cards
+        hasDrawnThisTurn: false, // Track if player drew this turn
         gameLog: [...recentLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -381,10 +383,23 @@ export const playCard = onCall(async (request) => {
       const card = playerHand[cardIndex];
       console.log('🃏 Card to play:', card);
 
-      // Validate: card can be played
-      if (!isValidMove(card, gameData.currentCard, gameData.activeColor)) {
-        console.error('❌ playCard: Invalid move:', { card, currentCard: gameData.currentCard, activeColor: gameData.activeColor });
-        throw new HttpsError('failed-precondition', 'This card cannot be played');
+      // Check if there's a pending draw count
+      const pendingDrawCount = gameData.pendingDrawCount || 0;
+
+      // If there's a pending draw, player can only play a draw card to stack
+      if (pendingDrawCount > 0) {
+        if (card.value !== 'draw2' && card.value !== 'draw4') {
+          console.error('❌ playCard: Must play a draw card or draw cards:', { pendingDrawCount });
+          throw new HttpsError('failed-precondition', `You must draw ${pendingDrawCount} cards or play a Draw 2/Draw 4 to stack`);
+        }
+        // Draw cards can always be played when there's a pending draw
+        console.log('✅ Stacking draw card');
+      } else {
+        // Normal validation
+        if (!isValidMove(card, gameData.currentCard, gameData.activeColor)) {
+          console.error('❌ playCard: Invalid move:', { card, currentCard: gameData.currentCard, activeColor: gameData.activeColor });
+          throw new HttpsError('failed-precondition', 'This card cannot be played');
+        }
       }
 
       // Validate: wild cards need a color
@@ -451,6 +466,7 @@ export const playCard = onCall(async (request) => {
         currentPlayerIndex: cardEffects.currentPlayerIndex,
         discardPile: [...gameData.discardPile, card],
         gameLog: winner ? [...recentLog, `🏆 ${currentPlayer.displayName} wins the game!`] : recentLog,
+        hasDrawnThisTurn: false, // Reset draw flag when playing a card
         updatedAt: FieldValue.serverTimestamp(),
       };
 
@@ -459,6 +475,7 @@ export const playCard = onCall(async (request) => {
       if (cardEffects.drawPileIndex !== undefined) updates.drawPileIndex = cardEffects.drawPileIndex;
       if (cardEffects.players) updates.players = cardEffects.players;
       else updates.players = updatedPlayers;
+      if (cardEffects.pendingDrawCount !== undefined) updates.pendingDrawCount = cardEffects.pendingDrawCount;
       if (status !== gameData.status) updates.status = status;
       if (winner) updates.winner = winner;
 
@@ -571,8 +588,15 @@ export const drawCard = onCall(async (request) => {
         drawPileIndex = 0;
       }
 
-      // Draw one card
-      const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, 1);
+      // Determine how many cards to draw
+      const pendingDrawCount = gameData.pendingDrawCount || 0;
+      const cardsToDraw = pendingDrawCount > 0 ? pendingDrawCount : 1;
+      const isPenaltyDraw = pendingDrawCount > 0;
+
+      console.log(`📊 Drawing ${cardsToDraw} cards (penalty: ${isPenaltyDraw})`);
+
+      // Draw cards
+      const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, cardsToDraw);
 
       if (drawnCards.length === 0) {
         console.error('❌ drawCard: No cards left to draw');
@@ -590,25 +614,33 @@ export const drawCard = onCall(async (request) => {
         return p;
       });
 
-      // Advance turn
-      const nextPlayerIndex = getNextPlayerIndex(
-        gameData.currentPlayerIndex,
-        gameData.players.length,
-        gameData.direction,
-        0
-      );
-
       // Keep only last 20 log entries (pagination optimization)
       const recentLog = gameData.gameLog.slice(-20);
 
-      // Field-masked updates (only changed fields)
+      // Build updates object
       const updates = {
         players: updatedPlayers,
         drawPileIndex: newIndex,
-        currentPlayerIndex: nextPlayerIndex,
-        gameLog: [...recentLog, `${currentPlayer.displayName} drew a card`],
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // If this was a penalty draw, advance turn and reset pendingDrawCount
+      if (isPenaltyDraw) {
+        const nextPlayerIndex = getNextPlayerIndex(
+          gameData.currentPlayerIndex,
+          gameData.players.length,
+          gameData.direction,
+          0
+        );
+        updates.currentPlayerIndex = nextPlayerIndex;
+        updates.pendingDrawCount = 0;
+        updates.hasDrawnThisTurn = false;
+        updates.gameLog = [...recentLog, `${currentPlayer.displayName} drew ${cardsToDraw} cards!`];
+      } else {
+        // Normal draw - allow player to play or skip
+        updates.hasDrawnThisTurn = true;
+        updates.gameLog = [...recentLog, `${currentPlayer.displayName} drew a card`];
+      }
 
       // Only update drawPile if it was reshuffled
       if (drawPile !== gameData.drawPile) {
@@ -637,6 +669,100 @@ export const drawCard = onCall(async (request) => {
       throw error;
     }
     throw new HttpsError('internal', `Failed to draw card: ${error.message}`);
+  }
+});
+
+/**
+ * Skip turn (after drawing a card)
+ * @param {string} gameId - The game ID
+ * @returns {Promise<{success: boolean}>}
+ */
+export const skipTurn = onCall(async (request) => {
+  console.log('⏭️ skipTurn called by:', request.auth?.uid);
+
+  if (!request.auth) {
+    console.error('❌ skipTurn: Unauthenticated request');
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const userId = request.auth.uid;
+  const { gameId } = request.data || {};
+
+  if (!gameId) {
+    console.error('❌ skipTurn: Missing gameId');
+    throw new HttpsError('invalid-argument', 'gameId is required');
+  }
+
+  console.log('📝 Skipping turn:', { gameId, userId });
+
+  try {
+    const gameRef = db.collection('games').doc(gameId);
+
+    await db.runTransaction(async (transaction) => {
+      const gameDoc = await transaction.get(gameRef);
+
+      if (!gameDoc.exists) {
+        console.error('❌ skipTurn: Game not found:', gameId);
+        throw new HttpsError('not-found', 'Game not found');
+      }
+
+      const gameData = gameDoc.data();
+
+      // Validate: game must be in progress
+      if (gameData.status !== 'in-progress') {
+        console.error('❌ skipTurn: Game not in progress:', gameData.status);
+        throw new HttpsError('failed-precondition', 'Game is not in progress');
+      }
+
+      // Validate: it's the player's turn
+      const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+      if (currentPlayer.uid !== userId) {
+        console.error('❌ skipTurn: Not player\'s turn:', { userId, currentPlayer: currentPlayer.uid });
+        throw new HttpsError('failed-precondition', 'It is not your turn');
+      }
+
+      // Validate: player must have drawn a card this turn
+      if (!gameData.hasDrawnThisTurn) {
+        console.error('❌ skipTurn: Player has not drawn a card this turn');
+        throw new HttpsError('failed-precondition', 'You must draw a card before skipping your turn');
+      }
+
+      console.log('✅ Validations passed, skipping turn...');
+
+      // Advance turn
+      const nextPlayerIndex = getNextPlayerIndex(
+        gameData.currentPlayerIndex,
+        gameData.players.length,
+        gameData.direction,
+        0
+      );
+
+      // Keep only last 20 log entries
+      const recentLog = gameData.gameLog.slice(-20);
+
+      // Field-masked updates
+      const updates = {
+        currentPlayerIndex: nextPlayerIndex,
+        hasDrawnThisTurn: false,
+        gameLog: [...recentLog, `${currentPlayer.displayName} skipped their turn`],
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      transaction.update(gameRef, updates);
+
+      console.log('✅ Turn skipped successfully:', {
+        gameId,
+        nextPlayerIndex,
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ skipTurn error:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', `Failed to skip turn: ${error.message}`);
   }
 });
 

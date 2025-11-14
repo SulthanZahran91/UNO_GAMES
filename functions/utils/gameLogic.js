@@ -114,37 +114,32 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
     }
 
     case 'draw2': {
-      // Next player draws 2 cards and is skipped
-      console.log('+2 Draw 2 card: next player draws 2');
-      const nextPlayerIndex = getNextPlayerIndex(currentPlayerIndex, players.length, direction, 0);
-      const nextPlayer = players[nextPlayerIndex];
+      // Set pending draw count (can be stacked with another draw card)
+      console.log('+2 Draw 2 card: setting pending draw to 2');
 
-      const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, 2);
+      // Get the current pending count (if stacking)
+      const currentPendingCount = gameState.pendingDrawCount || 0;
+      const newPendingCount = currentPendingCount + 2;
 
-      // Update next player's card count
-      const updatedPlayers = players.map((p, i) => {
-        if (i === nextPlayerIndex) {
-          return { ...p, cardCount: (p.cardCount || 0) + drawnCards.length };
-        }
-        return p;
-      });
-
-      updates.players = updatedPlayers;
-      updates.drawPileIndex = newIndex;
+      updates.pendingDrawCount = newPendingCount;
       updates.activeColor = card.color;
       updates.currentPlayerIndex = getNextPlayerIndex(
         currentPlayerIndex,
         players.length,
         direction,
-        1 // Skip the player who drew
+        0 // Move to next player normally
       );
-      updates.cardsToAdd.push({
-        playerIndex: nextPlayerIndex,
-        playerUid: nextPlayer.uid,
-        cards: drawnCards,
-      });
-      updates.gameLog.push(`${currentPlayer.displayName} played Draw 2 ${card.color}`);
-      updates.gameLog.push(`${nextPlayer.displayName} draws 2 cards and is skipped!`);
+
+      const nextPlayerIndex = updates.currentPlayerIndex;
+      const nextPlayer = players[nextPlayerIndex];
+
+      if (currentPendingCount > 0) {
+        updates.gameLog.push(`${currentPlayer.displayName} played Draw 2 ${card.color} (stacking!)`);
+        updates.gameLog.push(`${nextPlayer.displayName} must draw ${newPendingCount} cards or stack another draw card!`);
+      } else {
+        updates.gameLog.push(`${currentPlayer.displayName} played Draw 2 ${card.color}`);
+        updates.gameLog.push(`${nextPlayer.displayName} must draw 2 cards or play another draw card!`);
+      }
       break;
     }
 
@@ -164,38 +159,34 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
     }
 
     case 'draw4': {
-      // Next player draws 4 cards and is skipped, player chooses color
-      console.log('🌈+4 Wild Draw 4: next player draws 4');
-      const nextPlayerIndex = getNextPlayerIndex(currentPlayerIndex, players.length, direction, 0);
-      const nextPlayer = players[nextPlayerIndex];
+      // Set pending draw count (can be stacked with another draw 4)
+      console.log('🌈+4 Wild Draw 4: setting pending draw to 4');
 
-      const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, 4);
+      // Get the current pending count (if stacking)
+      const currentPendingCount = gameState.pendingDrawCount || 0;
+      const newPendingCount = currentPendingCount + 4;
 
-      // Update next player's card count
-      const updatedPlayers = players.map((p, i) => {
-        if (i === nextPlayerIndex) {
-          return { ...p, cardCount: (p.cardCount || 0) + drawnCards.length };
-        }
-        return p;
-      });
-
-      updates.players = updatedPlayers;
-      updates.drawPileIndex = newIndex;
+      updates.pendingDrawCount = newPendingCount;
       updates.activeColor = chosenColor || 'red';
       updates.currentPlayerIndex = getNextPlayerIndex(
         currentPlayerIndex,
         players.length,
         direction,
-        1 // Skip the player who drew
+        0 // Move to next player normally
       );
-      updates.cardsToAdd.push({
-        playerIndex: nextPlayerIndex,
-        playerUid: nextPlayer.uid,
-        cards: drawnCards,
-      });
-      updates.gameLog.push(`${currentPlayer.displayName} played Wild Draw 4`);
-      updates.gameLog.push(`${nextPlayer.displayName} draws 4 cards and is skipped!`);
-      updates.gameLog.push(`Color changed to ${updates.activeColor}!`);
+
+      const nextPlayerIndex = updates.currentPlayerIndex;
+      const nextPlayer = players[nextPlayerIndex];
+
+      if (currentPendingCount > 0) {
+        updates.gameLog.push(`${currentPlayer.displayName} played Wild Draw 4 (stacking!)`);
+        updates.gameLog.push(`Color changed to ${updates.activeColor}!`);
+        updates.gameLog.push(`${nextPlayer.displayName} must draw ${newPendingCount} cards or stack another draw 4!`);
+      } else {
+        updates.gameLog.push(`${currentPlayer.displayName} played Wild Draw 4`);
+        updates.gameLog.push(`Color changed to ${updates.activeColor}!`);
+        updates.gameLog.push(`${nextPlayer.displayName} must draw 4 cards or play another draw 4!`);
+      }
       break;
     }
 
