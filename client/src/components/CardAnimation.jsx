@@ -196,8 +196,8 @@ export default function CardAnimation({
       {type === 'draw' && (
         <div style={{
           position: 'absolute',
-          top: positions.draw.y,
-          left: positions.draw.x,
+          top: startPos.y,
+          left: startPos.x,
           transform: 'translate(-50%, -50%)',
           animation: `cardDraw 1s ease-in-out`,
           animationFillMode: 'forwards',
