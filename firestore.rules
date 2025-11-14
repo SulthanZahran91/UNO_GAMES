@@ -8,15 +8,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper function to check if user is a player in the game
-    function isPlayerInGame() {
-      return request.auth.uid in resource.data.players.map(p => p.uid);
-    }
-
     // Games collection rules
     match /games/{gameId} {
-      // Allow read access to authenticated users who are players in the game
-      allow read: if isAuthenticated() && isPlayerInGame();
+      // Allow read access to authenticated users
+      // The sensitive hand data is protected in the subcollection below
+      allow read: if isAuthenticated();
 
       // Only allow writes from Cloud Functions (server-side)
       // Client writes are disabled for security
