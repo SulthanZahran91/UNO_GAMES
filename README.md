@@ -85,13 +85,26 @@ UNO_GAMES/
 └── package.json         # Root package
 ```
 
-## 🎮 Game Flow
+## 🎮 Game Features
+
+- **12-Player Support**: Up to 12 players per game with circular layout
+- **Enhanced Animations**: Dramatic card play animations with special effects for power cards
+- **Turn Indicators**: Clear visual feedback with screen border flash when it's your turn
+- **Mobile Responsive**: Touch-friendly interface optimized for all screen sizes
+- **Real-time Gameplay**: Instant updates via Firestore listeners
+
+### Game Flow
 
 1. **Create Game**: Host creates a new game lobby
-2. **Join Game**: Up to 4 players join the lobby
-3. **Start Game**: Host starts the game (deals cards)
-4. **Play**: Players take turns playing cards
+2. **Join Game**: Up to 12 players can join the lobby
+3. **Start Game**: Host starts the game (deals 7 cards to each player)
+4. **Play**: Players take turns playing cards with animated effects
 5. **Win**: First player to empty their hand wins
+
+## 📚 Documentation
+
+For detailed architecture, animation system, and development guide, see:
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Comprehensive technical documentation
 
 ## 🐛 Debugging
 
