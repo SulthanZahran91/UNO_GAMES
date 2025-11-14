@@ -60,25 +60,28 @@ export default function TurnIndicator({
       width: 'fit-content',
     }}>
       {/* Main Turn Indicator */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'clamp(0.375rem, 2vw, 0.75rem)',
-        padding: 'clamp(0.5rem, 2vh, 0.75rem) clamp(0.75rem, 3vw, 1.25rem)',
-        background: isMyTurn
-          ? 'linear-gradient(135deg, rgba(0, 255, 0, 0.9) 0%, rgba(0, 200, 0, 0.95) 100%)'
-          : 'linear-gradient(135deg, rgba(255, 170, 0, 0.9) 0%, rgba(255, 140, 0, 0.95) 100%)',
-        borderRadius: 'clamp(1.5rem, 5vw, 3.125rem)',
-        boxShadow: isMyTurn
-          ? '0 0 1.875rem rgba(0, 255, 0, 0.6), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)'
-          : '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
-        border: isMyTurn ? '0.1875rem solid white' : '0.125rem solid white',
-        animation: isMyTurn ? 'glow 2s infinite, pulse 1s ease-in-out infinite' : 'none',
-        backgroundImage: isMyTurn
-          ? 'repeating-linear-gradient(45deg, transparent, transparent 0.625rem, rgba(255, 255, 255, 0.1) 0.625rem, rgba(255, 255, 255, 0.1) 1.25rem)'
-          : 'none',
-        maxWidth: '100%',
-      }}>
+      <div
+        className="turn-indicator-card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'clamp(0.375rem, 2vw, 0.75rem)',
+          padding: 'clamp(0.5rem, 2vh, 0.75rem) clamp(0.75rem, 3vw, 1.25rem)',
+          background: isMyTurn
+            ? 'linear-gradient(135deg, rgba(0, 255, 0, 0.9) 0%, rgba(0, 200, 0, 0.95) 100%)'
+            : 'linear-gradient(135deg, rgba(255, 170, 0, 0.9) 0%, rgba(255, 140, 0, 0.95) 100%)',
+          borderRadius: 'clamp(1.5rem, 5vw, 3.125rem)',
+          boxShadow: isMyTurn
+            ? '0 0 1.875rem rgba(0, 255, 0, 0.6), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)'
+            : '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
+          border: isMyTurn ? '0.1875rem solid white' : '0.125rem solid white',
+          animation: isMyTurn ? 'glow 2s infinite, pulse 1s ease-in-out infinite' : 'none',
+          backgroundImage: isMyTurn
+            ? 'repeating-linear-gradient(45deg, transparent, transparent 0.625rem, rgba(255, 255, 255, 0.1) 0.625rem, rgba(255, 255, 255, 0.1) 1.25rem)'
+            : 'none',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+        }}>
         {/* Direction Indicator */}
         <div style={{
           fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
@@ -95,16 +98,19 @@ export default function TurnIndicator({
           alignItems: 'center',
           minWidth: 0,
           flex: 1,
+          overflow: 'hidden',
         }}>
-          <div style={{
-            fontSize: 'clamp(0.5rem, 1.8vw, 0.7rem)',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            letterSpacing: '0.0625rem',
-            color: 'white',
-            textShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.3)',
-            whiteSpace: 'nowrap',
-          }}>
+          <div
+            className="turn-indicator-label"
+            style={{
+              fontSize: 'clamp(0.5rem, 1.8vw, 0.7rem)',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '0.0625rem',
+              color: 'white',
+              textShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.3)',
+              whiteSpace: 'nowrap',
+            }}>
             {isMyTurn ? '🎯 YOUR TURN!' : 'CURRENT TURN'}
           </div>
           <div style={{
@@ -122,35 +128,43 @@ export default function TurnIndicator({
         </div>
 
         {/* Player Count */}
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.3)',
-          padding: 'clamp(0.25rem, 1.5vh, 0.4rem) clamp(0.375rem, 2vw, 0.625rem)',
-          borderRadius: 'clamp(0.75rem, 3vw, 1rem)',
-          fontSize: 'clamp(0.625rem, 2vw, 0.8rem)',
-          fontWeight: 'bold',
-          color: 'white',
-          flexShrink: 0,
-          whiteSpace: 'nowrap',
-        }} aria-label={`${players?.length || 0} players in game`}>
+        <div
+          className="player-count-badge"
+          style={{
+            background: 'rgba(0, 0, 0, 0.3)',
+            padding: 'clamp(0.25rem, 1.5vh, 0.4rem) clamp(0.375rem, 2vw, 0.625rem)',
+            borderRadius: 'clamp(0.75rem, 3vw, 1rem)',
+            fontSize: 'clamp(0.625rem, 2vw, 0.8rem)',
+            fontWeight: 'bold',
+            color: 'white',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}
+          aria-label={`${players?.length || 0} players in game`}>
           {players?.length || 0} Players
         </div>
       </div>
 
       {/* Turn Sequence - Next Players Preview */}
       {turnSequence.length > 1 && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'clamp(0.25rem, 1.5vw, 0.4rem)',
-          padding: 'clamp(0.25rem, 1.5vh, 0.4rem) clamp(0.5rem, 2.5vw, 0.8rem)',
-          background: 'rgba(0, 0, 0, 0.7)',
-          borderRadius: 'clamp(0.75rem, 3vw, 1.25rem)',
-          border: '0.125rem solid rgba(255, 255, 255, 0.3)',
-          fontSize: 'clamp(0.5rem, 1.8vw, 0.7rem)',
-          color: 'white',
-          maxWidth: '95vw',
-          overflow: 'hidden',
-        }} role="status" aria-label="Turn sequence">
+        <div
+          className="turn-sequence-preview"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'clamp(0.25rem, 1.5vw, 0.4rem)',
+            padding: 'clamp(0.25rem, 1.5vh, 0.4rem) clamp(0.5rem, 2.5vw, 0.8rem)',
+            background: 'rgba(0, 0, 0, 0.7)',
+            borderRadius: 'clamp(0.75rem, 3vw, 1.25rem)',
+            border: '0.125rem solid rgba(255, 255, 255, 0.3)',
+            fontSize: 'clamp(0.5rem, 1.8vw, 0.7rem)',
+            color: 'white',
+            maxWidth: '90vw',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+          }}
+          role="status"
+          aria-label="Turn sequence">
           <span style={{ color: '#aaa', flexShrink: 0 }}>Next:</span>
           <div style={{
             display: 'flex',
@@ -158,6 +172,7 @@ export default function TurnIndicator({
             gap: 'clamp(0.25rem, 1vw, 0.4rem)',
             overflow: 'hidden',
             minWidth: 0,
+            flex: 1,
           }}>
             {turnSequence.slice(1).map((player, index) => (
               <span key={player.uid} style={{
@@ -165,6 +180,7 @@ export default function TurnIndicator({
                 alignItems: 'center',
                 gap: '0.2rem',
                 minWidth: 0,
+                overflow: 'hidden',
               }}>
                 {index > 0 && <span style={{ color: '#666', flexShrink: 0 }}>→</span>}
                 <span style={{
@@ -174,6 +190,7 @@ export default function TurnIndicator({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  maxWidth: '15ch',
                 }}>
                   {player.isMe ? 'You' : player.displayName}
                 </span>
@@ -205,16 +222,45 @@ export default function TurnIndicator({
           to { transform: rotate(360deg); }
         }
 
-        /* Mobile responsive */
-        @media (max-width: 48rem) {
-          [style*="fontSize: 1.5rem"] {
-            font-size: 1.25rem !important;
+        /* Mobile responsive - Hide turn sequence on very small screens */
+        @media (max-width: 30rem) {
+          .turn-sequence-preview {
+            display: none !important;
           }
-          [style*="fontSize: 1.125rem"] {
-            font-size: 1rem !important;
+
+          .turn-indicator-card {
+            padding: 0.4rem 0.6rem !important;
+            gap: 0.3rem !important;
           }
-          [style*="padding: 0.9375rem 1.875rem"] {
-            padding: 0.75rem 1rem !important;
+
+          .turn-indicator-label {
+            font-size: 0.5rem !important;
+            letter-spacing: 0.03rem !important;
+          }
+
+          .player-count-badge {
+            padding: 0.25rem 0.4rem !important;
+            font-size: 0.6rem !important;
+          }
+        }
+
+        /* Medium mobile - Simplify turn sequence */
+        @media (max-width: 48rem) and (min-width: 30.0625rem) {
+          .turn-sequence-preview {
+            max-width: 85vw !important;
+            padding: 0.3rem 0.6rem !important;
+            font-size: 0.55rem !important;
+          }
+
+          .turn-indicator-card {
+            padding: 0.5rem 0.75rem !important;
+          }
+        }
+
+        /* Landscape mode optimization */
+        @media (max-height: 30rem) {
+          .turn-sequence-preview {
+            display: none !important;
           }
         }
       `}</style>
