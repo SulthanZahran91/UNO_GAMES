@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is a player in the game
+    function isPlayerInGame() {
+      return request.auth.uid in resource.data.players.map(p => p.uid);
+    }
+
+    // Games collection rules
+    match /games/{gameId} {
+      // Allow read access to authenticated users who are players in the game
+      allow read: if isAuthenticated() && isPlayerInGame();
+
+      // Only allow writes from Cloud Functions (server-side)
+      // Client writes are disabled for security
+      allow write: if false;
+
+      // Player subcollection - contains private hand data
+      match /players/{playerId} {
+        // Allow players to read their own hand only
+        allow read: if isAuthenticated() && request.auth.uid == playerId;
+
+        // Only allow writes from Cloud Functions (server-side)
+        allow write: if false;
+      }
+    }
+
+    // User presence/status collection (if needed)
+    match /presence/{userId} {
+      // Users can read and write their own presence
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
