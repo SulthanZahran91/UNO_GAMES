@@ -164,7 +164,7 @@ export default function GameRoom({ user }) {
                 </div>
                 {game.status === 'in-progress' && (
                   <div style={{ fontSize: '12px', color: '#aaa' }}>
-                    Cards: {player.hand?.length || 0}
+                    Cards: {player.cardCount || 0}
                   </div>
                 )}
               </div>

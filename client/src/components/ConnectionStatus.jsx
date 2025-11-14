@@ -85,7 +85,14 @@ export default function ConnectionStatus({ user }) {
     });
 
     // Ping interval to check latency and maintain connection status
-    pingInterval = setInterval(() => {
+    // Optimized: Increased to 15 seconds to reduce writes
+    const performPing = () => {
+      // Skip ping if document is hidden (user not viewing the tab)
+      if (document.hidden) {
+        console.log('⏸️ Skipping ping - tab is hidden');
+        return;
+      }
+
       const pingStart = Date.now();
       setDoc(userStatusRef, {
         state: 'online',
@@ -107,11 +114,28 @@ export default function ConnectionStatus({ user }) {
           console.error('Ping failed:', error);
           setConnectionState('disconnected');
         });
-    }, 5000); // Check every 5 seconds
+    };
+
+    // Initial ping
+    performPing();
+
+    // Set up interval with optimized timing (15s instead of 5s)
+    pingInterval = setInterval(performPing, 15000); // Check every 15 seconds
+
+    // Visibility API: Resume pinging when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('👁️ Tab visible - performing immediate ping');
+        performPing();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       unsubscribe();
       clearInterval(pingInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
 
       // Clear any pending timeout
       if (connectionTimeoutRef.current) {

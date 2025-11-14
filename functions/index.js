@@ -43,7 +43,7 @@ export const createGame = onCall(async (request) => {
       players: [{
         uid: userId,
         displayName,
-        hand: [],
+        cardCount: 0,
       }],
       drawPile: [],
       drawPileIndex: 0,
@@ -59,6 +59,14 @@ export const createGame = onCall(async (request) => {
     };
 
     await gameRef.set(gameData);
+
+    // Initialize player's hand in subcollection
+    const playerRef = gameRef.collection('players').doc(userId);
+    await playerRef.set({
+      uid: userId,
+      hand: [],
+      updatedAt: FieldValue.serverTimestamp(),
+    });
 
     console.log('✅ Game created successfully:', gameId);
 
@@ -124,11 +132,11 @@ export const joinGame = onCall(async (request) => {
         throw new HttpsError('already-exists', 'You are already in this game');
       }
 
-      // Add player to game
+      // Add player to game (metadata only, no hand)
       const newPlayer = {
         uid: userId,
         displayName,
-        hand: [],
+        cardCount: 0,
       };
 
       transaction.update(gameRef, {
@@ -138,6 +146,14 @@ export const joinGame = onCall(async (request) => {
       });
 
       console.log('✅ Player joined successfully:', { gameId, userId });
+    });
+
+    // Initialize player's hand in subcollection (outside transaction)
+    const playerRef = gameRef.collection('players').doc(userId);
+    await playerRef.set({
+      uid: userId,
+      hand: [],
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return { success: true };
@@ -216,23 +232,21 @@ export const startGame = onCall(async (request) => {
 
       // Deal 7 cards to each player
       let drawPileIndex = 0;
-      const updatedPlayers = gameData.players.map((player, index) => {
-        const hand = [];
-        for (let i = 0; i < 7; i++) {
-          hand.push(deck[drawPileIndex]);
-          drawPileIndex++;
-        }
-        console.log(`✅ Dealt 7 cards to ${player.displayName}`);
-        return { ...player, hand };
+      const updatedPlayers = gameData.players.map((player) => {
+        return { ...player, cardCount: 7 };
       });
 
       // Get valid starting card
-      const { card: startCard, newIndex } = getValidStartCard(deck, drawPileIndex);
+      const startCardIndex = drawPileIndex + (gameData.players.length * 7);
+      const { card: startCard, newIndex } = getValidStartCard(deck, startCardIndex);
       drawPileIndex = newIndex;
 
       console.log('🎯 Start card:', startCard);
 
-      // Initialize game state
+      // Keep only last 20 log entries (pagination optimization)
+      const recentLog = gameData.gameLog.slice(-20);
+
+      // Initialize game state with field-specific updates
       const updates = {
         status: 'in-progress',
         players: updatedPlayers,
@@ -243,7 +257,7 @@ export const startGame = onCall(async (request) => {
         activeColor: startCard.color,
         currentPlayerIndex: 0,
         direction: 'clockwise',
-        gameLog: [...gameData.gameLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
+        gameLog: [...recentLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
         updatedAt: FieldValue.serverTimestamp(),
       };
 
@@ -256,6 +270,29 @@ export const startGame = onCall(async (request) => {
         cardsRemaining: deck.length - drawPileIndex,
       });
     });
+
+    // Deal cards to each player's subcollection (outside transaction for better performance)
+    const gameDoc = await gameRef.get();
+    const finalGameData = gameDoc.data();
+    const batch = db.batch();
+    let cardIndex = 0;
+
+    for (const player of finalGameData.players) {
+      const hand = [];
+      for (let i = 0; i < 7; i++) {
+        hand.push(finalGameData.drawPile[cardIndex]);
+        cardIndex++;
+      }
+      const playerRef = gameRef.collection('players').doc(player.uid);
+      batch.set(playerRef, {
+        uid: player.uid,
+        hand,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      console.log(`✅ Dealt 7 cards to ${player.displayName}`);
+    }
+
+    await batch.commit();
 
     return { success: true };
   } catch (error) {
@@ -299,6 +336,17 @@ export const playCard = onCall(async (request) => {
 
   try {
     const gameRef = db.collection('games').doc(gameId);
+    const playerRef = gameRef.collection('players').doc(userId);
+
+    // Get player's hand from subcollection first
+    const playerDoc = await playerRef.get();
+    if (!playerDoc.exists) {
+      console.error('❌ playCard: Player hand not found:', userId);
+      throw new HttpsError('not-found', 'Player hand not found');
+    }
+
+    const playerData = playerDoc.data();
+    const playerHand = playerData.hand || [];
 
     await db.runTransaction(async (transaction) => {
       const gameDoc = await transaction.get(gameRef);
@@ -324,12 +372,12 @@ export const playCard = onCall(async (request) => {
       }
 
       // Get the card from player's hand
-      if (cardIndex < 0 || cardIndex >= currentPlayer.hand.length) {
+      if (cardIndex < 0 || cardIndex >= playerHand.length) {
         console.error('❌ playCard: Invalid card index:', cardIndex);
         throw new HttpsError('invalid-argument', 'Invalid card index');
       }
 
-      const card = currentPlayer.hand[cardIndex];
+      const card = playerHand[cardIndex];
       console.log('🃏 Card to play:', card);
 
       // Validate: card can be played
@@ -347,12 +395,12 @@ export const playCard = onCall(async (request) => {
       console.log('✅ Move is valid, applying card effect...');
 
       // Remove card from player's hand
-      const updatedHand = currentPlayer.hand.filter((_, i) => i !== cardIndex);
+      const updatedHand = playerHand.filter((_, i) => i !== cardIndex);
 
-      // Update player's hand
+      // Update player's card count in main document
       const updatedPlayers = gameData.players.map((p, i) => {
         if (i === gameData.currentPlayerIndex) {
-          return { ...p, hand: updatedHand };
+          return { ...p, cardCount: updatedHand.length };
         }
         return p;
       });
@@ -372,25 +420,52 @@ export const playCard = onCall(async (request) => {
         players: updatedPlayers,
       }, chosenColor);
 
-      // Add card to discard pile
-      const discardPile = [...gameData.discardPile, card];
+      // Keep only last 20 log entries (pagination optimization)
+      const currentLog = cardEffects.gameLog || gameData.gameLog;
+      const recentLog = currentLog.slice(-20);
 
-      // Build updates
+      // Build updates with field masks (only changed fields)
       const updates = {
-        ...cardEffects,
-        players: cardEffects.players || updatedPlayers,
         currentCard: card,
-        discardPile,
-        status,
-        winner,
+        activeColor: cardEffects.activeColor,
+        currentPlayerIndex: cardEffects.currentPlayerIndex,
+        discardPile: [...gameData.discardPile, card],
+        gameLog: winner ? [...recentLog, `🏆 ${currentPlayer.displayName} wins the game!`] : recentLog,
         updatedAt: FieldValue.serverTimestamp(),
       };
 
-      if (winner) {
-        updates.gameLog = [...(cardEffects.gameLog || gameData.gameLog), `🏆 ${currentPlayer.displayName} wins the game!`];
-      }
+      // Add optional fields only if they exist
+      if (cardEffects.direction !== undefined) updates.direction = cardEffects.direction;
+      if (cardEffects.drawPileIndex !== undefined) updates.drawPileIndex = cardEffects.drawPileIndex;
+      if (cardEffects.players) updates.players = cardEffects.players;
+      else updates.players = updatedPlayers;
+      if (status !== gameData.status) updates.status = status;
+      if (winner) updates.winner = winner;
 
       transaction.update(gameRef, updates);
+
+      // Update current player's hand in subcollection
+      transaction.update(playerRef, {
+        hand: updatedHand,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      // Handle cards to add to other players (for Draw 2 and Draw 4 effects)
+      if (cardEffects.cardsToAdd && cardEffects.cardsToAdd.length > 0) {
+        for (const cardAddition of cardEffects.cardsToAdd) {
+          const affectedPlayerRef = gameRef.collection('players').doc(cardAddition.playerUid);
+          const affectedPlayerDoc = await transaction.get(affectedPlayerRef);
+
+          if (affectedPlayerDoc.exists) {
+            const affectedPlayerData = affectedPlayerDoc.data();
+            const affectedPlayerHand = affectedPlayerData.hand || [];
+            transaction.update(affectedPlayerRef, {
+              hand: [...affectedPlayerHand, ...cardAddition.cards],
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      }
 
       console.log('✅ Card played successfully:', {
         gameId,
@@ -435,6 +510,17 @@ export const drawCard = onCall(async (request) => {
 
   try {
     const gameRef = db.collection('games').doc(gameId);
+    const playerRef = gameRef.collection('players').doc(userId);
+
+    // Get player's hand from subcollection first
+    const playerDoc = await playerRef.get();
+    if (!playerDoc.exists) {
+      console.error('❌ drawCard: Player hand not found:', userId);
+      throw new HttpsError('not-found', 'Player hand not found');
+    }
+
+    const playerData = playerDoc.data();
+    const playerHand = playerData.hand || [];
 
     await db.runTransaction(async (transaction) => {
       const gameDoc = await transaction.get(gameRef);
@@ -483,9 +569,12 @@ export const drawCard = onCall(async (request) => {
       }
 
       // Update player's hand
+      const updatedHand = [...playerHand, ...drawnCards];
+
+      // Update player's card count in main document
       const updatedPlayers = gameData.players.map((p, i) => {
         if (i === gameData.currentPlayerIndex) {
-          return { ...p, hand: [...p.hand, ...drawnCards] };
+          return { ...p, cardCount: updatedHand.length };
         }
         return p;
       });
@@ -498,16 +587,30 @@ export const drawCard = onCall(async (request) => {
         0
       );
 
+      // Keep only last 20 log entries (pagination optimization)
+      const recentLog = gameData.gameLog.slice(-20);
+
+      // Field-masked updates (only changed fields)
       const updates = {
         players: updatedPlayers,
-        drawPile,
         drawPileIndex: newIndex,
         currentPlayerIndex: nextPlayerIndex,
-        gameLog: [...gameData.gameLog, `${currentPlayer.displayName} drew a card`],
+        gameLog: [...recentLog, `${currentPlayer.displayName} drew a card`],
         updatedAt: FieldValue.serverTimestamp(),
       };
 
+      // Only update drawPile if it was reshuffled
+      if (drawPile !== gameData.drawPile) {
+        updates.drawPile = drawPile;
+      }
+
       transaction.update(gameRef, updates);
+
+      // Update player's hand in subcollection
+      transaction.update(playerRef, {
+        hand: updatedHand,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
       console.log('✅ Card drawn successfully:', {
         gameId,

@@ -60,7 +60,7 @@ export function drawCards(deck, drawPileIndex, count) {
  * @param {Object} card - The card being played
  * @param {Object} gameState - Current game state
  * @param {string} chosenColor - Color chosen for wild cards
- * @returns {Object} Game state updates
+ * @returns {Object} Game state updates including cardsToAdd for affected players
  */
 export function applyCardEffect(card, gameState, chosenColor = null) {
   console.log('🎴 Applying card effect:', card);
@@ -77,6 +77,7 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
   const currentPlayer = players[currentPlayerIndex];
   const updates = {
     gameLog: [...gameLog],
+    cardsToAdd: [], // Array of {playerIndex, playerUid, cards}
   };
 
   switch (card.value) {
@@ -120,10 +121,10 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
 
       const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, 2);
 
-      // Update next player's hand
+      // Update next player's card count
       const updatedPlayers = players.map((p, i) => {
         if (i === nextPlayerIndex) {
-          return { ...p, hand: [...p.hand, ...drawnCards] };
+          return { ...p, cardCount: (p.cardCount || 0) + drawnCards.length };
         }
         return p;
       });
@@ -137,6 +138,11 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         direction,
         1 // Skip the player who drew
       );
+      updates.cardsToAdd.push({
+        playerIndex: nextPlayerIndex,
+        playerUid: nextPlayer.uid,
+        cards: drawnCards,
+      });
       updates.gameLog.push(`${currentPlayer.displayName} played Draw 2 ${card.color}`);
       updates.gameLog.push(`${nextPlayer.displayName} draws 2 cards and is skipped!`);
       break;
@@ -165,10 +171,10 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
 
       const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, 4);
 
-      // Update next player's hand
+      // Update next player's card count
       const updatedPlayers = players.map((p, i) => {
         if (i === nextPlayerIndex) {
-          return { ...p, hand: [...p.hand, ...drawnCards] };
+          return { ...p, cardCount: (p.cardCount || 0) + drawnCards.length };
         }
         return p;
       });
@@ -182,6 +188,11 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         direction,
         1 // Skip the player who drew
       );
+      updates.cardsToAdd.push({
+        playerIndex: nextPlayerIndex,
+        playerUid: nextPlayer.uid,
+        cards: drawnCards,
+      });
       updates.gameLog.push(`${currentPlayer.displayName} played Wild Draw 4`);
       updates.gameLog.push(`${nextPlayer.displayName} draws 4 cards and is skipped!`);
       updates.gameLog.push(`Color changed to ${updates.activeColor}!`);
