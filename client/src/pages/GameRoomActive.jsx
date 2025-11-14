@@ -251,15 +251,14 @@ export default function GameRoomActive({ game, user, gameId }) {
       </div>
 
       {/* Player's Hand */}
-      {myPlayer && !handLoading && (
-        <PlayerHand
-          hand={myHand || []}
-          onCardClick={handleCardClick}
-          currentCard={game.currentCard}
-          activeColor={game.activeColor}
-          disabled={!isMyTurn || actionLoading}
-        />
-      )}
+      <PlayerHand
+        hand={myHand || []}
+        onCardClick={handleCardClick}
+        currentCard={game.currentCard}
+        activeColor={game.activeColor}
+        disabled={!isMyTurn || actionLoading}
+        loading={handLoading}
+      />
 
       {/* Card Animations */}
       {activeAnimation && (

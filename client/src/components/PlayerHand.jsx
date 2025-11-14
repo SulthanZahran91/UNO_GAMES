@@ -13,7 +13,8 @@ export default function PlayerHand({
   onCardClick,
   currentCard,
   activeColor,
-  disabled = false
+  disabled = false,
+  loading = false
 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -30,7 +31,20 @@ export default function PlayerHand({
     disabled,
     currentCard,
     activeColor,
+    loading,
   });
+
+  if (loading) {
+    return (
+      <div style={{
+        padding: '20px',
+        textAlign: 'center',
+        color: '#aaa',
+      }}>
+        Loading your cards...
+      </div>
+    );
+  }
 
   if (!hand || hand.length === 0) {
     return (
