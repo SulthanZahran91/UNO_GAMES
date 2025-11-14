@@ -37,15 +37,19 @@ export function usePlayerHand(gameId, userId) {
       (docSnapshot) => {
         if (docSnapshot.exists()) {
           const playerData = docSnapshot.data();
+          const handData = playerData.hand || [];
           console.log('🃏 usePlayerHand: Hand updated:', {
             gameId,
             userId,
-            cardCount: playerData.hand?.length || 0,
+            cardCount: handData.length,
+            handData: handData,
+            fullPlayerData: playerData,
           });
-          setHand(playerData.hand || []);
+          setHand(handData);
           setError(null);
         } else {
           console.warn('⚠️ usePlayerHand: Player hand not found:', { gameId, userId });
+          console.warn('⚠️ usePlayerHand: Document path:', playerHandRef.path);
           setHand([]);
           setError(null);
         }
@@ -53,6 +57,9 @@ export function usePlayerHand(gameId, userId) {
       },
       (err) => {
         console.error('❌ usePlayerHand: Snapshot error:', err);
+        console.error('❌ usePlayerHand: Error code:', err.code);
+        console.error('❌ usePlayerHand: Error message:', err.message);
+        console.error('❌ usePlayerHand: Document path:', playerHandRef.path);
         setError(err);
         setLoading(false);
       }

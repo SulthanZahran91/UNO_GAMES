@@ -28,6 +28,8 @@ export default function PlayerHand({
   }, []);
   console.log('👋 PlayerHand render:', {
     cardCount: hand.length,
+    hand: hand,
+    handIsArray: Array.isArray(hand),
     disabled,
     currentCard,
     activeColor,

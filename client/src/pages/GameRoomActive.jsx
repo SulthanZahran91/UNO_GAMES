@@ -32,6 +32,10 @@ export default function GameRoomActive({ game, user, gameId }) {
     currentPlayerIndex: game.currentPlayerIndex,
     status: game.status,
     myHandCount: myHand?.length || 0,
+    myHand: myHand,
+    handLoading: handLoading,
+    myPlayer: myPlayer,
+    myPlayerCardCount: myPlayer?.cardCount,
   });
 
   // Find current player
