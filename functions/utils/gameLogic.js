@@ -9,9 +9,10 @@
  * @param {number} totalPlayers - Total number of players
  * @param {string} direction - 'clockwise' or 'counter-clockwise'
  * @param {number} skip - Number of players to skip (default 0)
+ * @param {Array} players - Array of player objects (optional, to skip eliminated players)
  * @returns {number} Next player index
  */
-export function getNextPlayerIndex(currentIndex, totalPlayers, direction, skip = 0) {
+export function getNextPlayerIndex(currentIndex, totalPlayers, direction, skip = 0, players = null) {
   console.log('➡️ Getting next player:', { currentIndex, totalPlayers, direction, skip });
 
   let nextIndex = currentIndex;
@@ -22,6 +23,27 @@ export function getNextPlayerIndex(currentIndex, totalPlayers, direction, skip =
       nextIndex = (nextIndex + 1) % totalPlayers;
     } else {
       nextIndex = (nextIndex - 1 + totalPlayers) % totalPlayers;
+    }
+  }
+
+  // If players array is provided, skip eliminated players (those with 0 cards)
+  if (players && players.length > 0) {
+    let attempts = 0;
+    const maxAttempts = totalPlayers; // Prevent infinite loop
+
+    // Keep advancing until we find a player with cards
+    while (attempts < maxAttempts && players[nextIndex]?.cardCount === 0) {
+      console.log(`⏭️ Skipping eliminated player at index ${nextIndex} (${players[nextIndex]?.displayName})`);
+      if (direction === 'clockwise') {
+        nextIndex = (nextIndex + 1) % totalPlayers;
+      } else {
+        nextIndex = (nextIndex - 1 + totalPlayers) % totalPlayers;
+      }
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      console.warn('⚠️ All players appear to be eliminated, returning current index');
     }
   }
 
@@ -89,10 +111,12 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         currentPlayerIndex,
         players.length,
         direction,
-        1 // Skip 1 player
+        1, // Skip 1 player
+        players // Pass players to skip eliminated ones
       );
       updates.gameLog.push(`${currentPlayer.displayName} played Skip ${card.color}`);
-      const skippedPlayer = players[getNextPlayerIndex(currentPlayerIndex, players.length, direction, 0)];
+      const skippedPlayerIndex = getNextPlayerIndex(currentPlayerIndex, players.length, direction, 0, players);
+      const skippedPlayer = players[skippedPlayerIndex];
       updates.gameLog.push(`${skippedPlayer.displayName} was skipped!`);
       break;
     }
@@ -106,7 +130,8 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         currentPlayerIndex,
         players.length,
         updates.direction,
-        0
+        0,
+        players // Pass players to skip eliminated ones
       );
       updates.gameLog.push(`${currentPlayer.displayName} played Reverse ${card.color}`);
       updates.gameLog.push(`Direction reversed to ${updates.direction}!`);
@@ -127,7 +152,8 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         currentPlayerIndex,
         players.length,
         direction,
-        0 // Move to next player normally
+        0, // Move to next player normally
+        players // Pass players to skip eliminated ones
       );
 
       const nextPlayerIndex = updates.currentPlayerIndex;
@@ -151,7 +177,8 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         currentPlayerIndex,
         players.length,
         direction,
-        0
+        0,
+        players // Pass players to skip eliminated ones
       );
       updates.gameLog.push(`${currentPlayer.displayName} played Wild`);
       updates.gameLog.push(`Color changed to ${updates.activeColor}!`);
@@ -172,7 +199,8 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         currentPlayerIndex,
         players.length,
         direction,
-        0 // Move to next player normally
+        0, // Move to next player normally
+        players // Pass players to skip eliminated ones
       );
 
       const nextPlayerIndex = updates.currentPlayerIndex;
@@ -198,7 +226,8 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         currentPlayerIndex,
         players.length,
         direction,
-        0
+        0,
+        players // Pass players to skip eliminated ones
       );
       updates.gameLog.push(`${currentPlayer.displayName} played ${card.color} ${card.value}`);
       break;

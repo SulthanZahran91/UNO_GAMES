@@ -421,13 +421,29 @@ export const playCard = onCall(async (request) => {
         return p;
       });
 
-      // Check for win
+      // Check for win - game ends when only one player has cards left
       let winner = null;
       let status = gameData.status;
-      if (updatedHand.length === 0) {
-        console.log('🏆 Player wins!', currentPlayer.displayName);
-        winner = userId;
+
+      // Count how many players still have cards (including current player with updated hand)
+      const playersWithCards = updatedPlayers.filter(p => {
+        // For current player, use updatedHand length; for others, use their cardCount
+        if (p.uid === userId) {
+          return updatedHand.length > 0;
+        }
+        return p.cardCount > 0;
+      });
+
+      console.log(`📊 Players with cards remaining: ${playersWithCards.length}/${updatedPlayers.length}`);
+
+      // If only one player has cards left, they win
+      if (playersWithCards.length === 1) {
+        winner = playersWithCards[0].uid;
         status = 'finished';
+        console.log('🏆 Last player standing wins!', playersWithCards[0].displayName);
+      } else if (updatedHand.length === 0) {
+        // Current player is out but game continues
+        console.log(`✅ ${currentPlayer.displayName} is out! ${playersWithCards.length} players remaining.`);
       }
 
       // Apply card effect (determine which players will be affected)
@@ -460,12 +476,21 @@ export const playCard = onCall(async (request) => {
       const recentLog = currentLog.slice(-20);
 
       // Build updates with field masks (only changed fields)
+      // Determine appropriate game log message
+      let logMessage = null;
+      if (winner) {
+        const winnerName = updatedPlayers.find(p => p.uid === winner)?.displayName || 'Unknown';
+        logMessage = `🏆 ${winnerName} wins the game! Last player standing!`;
+      } else if (updatedHand.length === 0) {
+        logMessage = `✅ ${currentPlayer.displayName} is out! ${playersWithCards.length} player(s) remaining.`;
+      }
+
       const updates = {
         currentCard: card,
         activeColor: cardEffects.activeColor,
         currentPlayerIndex: cardEffects.currentPlayerIndex,
         discardPile: [...gameData.discardPile, card],
-        gameLog: winner ? [...recentLog, `🏆 ${currentPlayer.displayName} wins the game!`] : recentLog,
+        gameLog: logMessage ? [...recentLog, logMessage] : recentLog,
         hasDrawnThisTurn: false, // Reset draw flag when playing a card
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -630,7 +655,8 @@ export const drawCard = onCall(async (request) => {
           gameData.currentPlayerIndex,
           gameData.players.length,
           gameData.direction,
-          0
+          0,
+          updatedPlayers // Pass updated players to skip eliminated ones
         );
         updates.currentPlayerIndex = nextPlayerIndex;
         updates.pendingDrawCount = 0;
@@ -734,7 +760,8 @@ export const skipTurn = onCall(async (request) => {
         gameData.currentPlayerIndex,
         gameData.players.length,
         gameData.direction,
-        0
+        0,
+        gameData.players // Pass players to skip eliminated ones
       );
 
       // Keep only last 20 log entries
