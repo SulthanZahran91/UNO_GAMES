@@ -13,31 +13,56 @@ export default function TurnIndicator({
 }) {
   if (!currentPlayer) return null;
 
-  // Calculate next player
+  // Calculate next player (skipping eliminated players with 0 cards)
   const getNextPlayerIndex = () => {
     if (!players || players.length < 2) return null;
     const increment = direction === 'clockwise' ? 1 : -1;
-    return (currentPlayerIndex + increment + players.length) % players.length;
+    let nextIndex = (currentPlayerIndex + increment + players.length) % players.length;
+
+    // Skip eliminated players (those with 0 cards)
+    let attempts = 0;
+    const maxAttempts = players.length;
+    while (attempts < maxAttempts && players[nextIndex]?.cardCount === 0) {
+      nextIndex = (nextIndex + increment + players.length) % players.length;
+      attempts++;
+    }
+
+    return nextIndex;
   };
 
   const nextPlayerIndex = getNextPlayerIndex();
   const nextPlayer = nextPlayerIndex !== null ? players[nextPlayerIndex] : null;
 
-  // Get turn sequence (current, next, next+1)
+  // Get turn sequence (current, next, next+1) - skip eliminated players
   const getTurnSequence = () => {
     if (!players || players.length < 2) return [];
     const sequence = [];
     let index = currentPlayerIndex;
     const increment = direction === 'clockwise' ? 1 : -1;
+    const playersWithCards = players.filter(p => p.cardCount > 0).length;
+    const maxSequence = Math.min(3, playersWithCards);
 
-    for (let i = 0; i < Math.min(3, players.length); i++) {
+    for (let i = 0; i < maxSequence; i++) {
       const player = players[index];
-      sequence.push({
-        ...player,
-        isMe: player.uid === myUid,
-        isCurrent: i === 0
-      });
-      index = (index + increment + players.length) % players.length;
+
+      // Only add players with cards
+      if (player && (i === 0 || player.cardCount > 0)) {
+        sequence.push({
+          ...player,
+          isMe: player.uid === myUid,
+          isCurrent: i === 0
+        });
+      }
+
+      // Move to next player, skipping eliminated ones (except for first iteration)
+      if (i < maxSequence - 1) {
+        index = (index + increment + players.length) % players.length;
+        let attempts = 0;
+        while (attempts < players.length && players[index]?.cardCount === 0) {
+          index = (index + increment + players.length) % players.length;
+          attempts++;
+        }
+      }
     }
 
     return sequence;
