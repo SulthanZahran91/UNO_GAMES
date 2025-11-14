@@ -46,19 +46,36 @@ export default function TurnIndicator({
   const turnSequence = getTurnSequence();
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 'clamp(0.5rem, 2vh, 1.25rem)',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 'clamp(0.375rem, 1.5vh, 0.75rem)',
-      maxWidth: '95vw',
-      width: 'fit-content',
-    }}>
+    <>
+      {/* Full screen border flash when it's your turn */}
+      {isMyTurn && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          border: '6px solid #0f0',
+          pointerEvents: 'none',
+          zIndex: 999,
+          animation: 'borderFlash 2s ease-in-out infinite',
+          borderRadius: '8px',
+        }} />
+      )}
+
+      <div style={{
+        position: 'fixed',
+        top: 'clamp(0.5rem, 2vh, 1.25rem)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 'clamp(0.375rem, 1.5vh, 0.75rem)',
+        maxWidth: '95vw',
+        width: 'fit-content',
+      }}>
       {/* Main Turn Indicator */}
       <div
         className="turn-indicator-card"
@@ -201,20 +218,42 @@ export default function TurnIndicator({
       )}
 
       <style>{`
-        @keyframes glow {
+        @keyframes borderFlash {
           0%, 100% {
-            box-shadow: 0 0 1.875rem rgba(0, 255, 0, 0.6), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
+            opacity: 0.4;
+            border-color: #0f0;
+            box-shadow: inset 0 0 40px rgba(0, 255, 0, 0.5), 0 0 40px rgba(0, 255, 0, 0.5);
           }
           50% {
-            box-shadow: 0 0 3.125rem rgba(0, 255, 0, 0.9), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
+            opacity: 0.8;
+            border-color: #5f5;
+            box-shadow: inset 0 0 80px rgba(0, 255, 0, 0.8), 0 0 80px rgba(0, 255, 0, 0.8);
+          }
+        }
+
+        @keyframes glow {
+          0%, 100% {
+            box-shadow: 0 0 2rem rgba(0, 255, 0, 0.8), 0 0 4rem rgba(0, 255, 0, 0.4), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
+          }
+          33% {
+            box-shadow: 0 0 3rem rgba(0, 255, 0, 1), 0 0 6rem rgba(0, 255, 0, 0.6), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
+          }
+          66% {
+            box-shadow: 0 0 4rem rgba(50, 255, 50, 1), 0 0 8rem rgba(50, 255, 50, 0.8), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
           }
         }
         @keyframes pulse {
           0%, 100% {
-            transform: scale(1);
+            transform: scale(1) translateX(-50%);
+          }
+          25% {
+            transform: scale(1.05) translateX(-50%);
           }
           50% {
-            transform: scale(1.02);
+            transform: scale(1.08) translateX(-50%);
+          }
+          75% {
+            transform: scale(1.05) translateX(-50%);
           }
         }
         @keyframes rotate {
@@ -264,6 +303,7 @@ export default function TurnIndicator({
           }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
