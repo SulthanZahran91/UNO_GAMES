@@ -113,9 +113,9 @@ export const joinGame = onCall(async (request) => {
         throw new HttpsError('failed-precondition', 'Game has already started');
       }
 
-      if (gameData.players.length >= 4) {
+      if (gameData.players.length >= 12) {
         console.error('❌ joinGame: Game is full:', gameId);
-        throw new HttpsError('failed-precondition', 'Game is full (max 4 players)');
+        throw new HttpsError('failed-precondition', 'Game is full (max 12 players)');
       }
 
       // Check if player is already in the game

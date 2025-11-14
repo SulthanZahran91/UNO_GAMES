@@ -17,14 +17,18 @@ export default function OpponentDisplay({
   // Get opponents (all players except me)
   const opponents = players.filter(p => p.uid !== myUid);
 
-  // Calculate opponent positions based on player count and screen size
+  // Calculate opponent positions in a circular layout
+  // For up to 11 opponents (12 players total with you at the bottom)
   const getPosition = (index, total) => {
-    if (total === 1) return 'top';
-    if (total === 2) return index === 0 ? 'top-left' : 'top-right';
-    // 3 opponents: left, top, right
-    if (index === 0) return 'left';
-    if (index === 1) return 'top';
-    return 'right';
+    if (total === 1) return { type: 'top', angle: 0 };
+    if (total === 2) return { type: index === 0 ? 'top-left' : 'top-right', angle: index === 0 ? -45 : 45 };
+
+    // For 3+ opponents, distribute them in a semi-circle from left to right
+    // Angle ranges from -90° (left) to 90° (right)
+    const angleStep = 180 / (total + 1);
+    const angle = -90 + (angleStep * (index + 1));
+
+    return { type: 'circular', angle };
   };
 
   return (
@@ -44,44 +48,59 @@ export default function OpponentDisplay({
         const isCurrentPlayer = players[currentPlayerIndex]?.uid === opponent.uid;
         const playerIndex = players.findIndex(p => p.uid === opponent.uid);
 
-        // Position styles - responsive using percentages and viewport units
-        const positionStyles = {
-          'top': {
+        // Calculate position styles based on circular layout
+        const getPositionStyle = () => {
+          if (position.type === 'top') {
+            return {
+              position: 'absolute',
+              top: '0',
+              left: '50%',
+              transform: 'translateX(-50%)',
+            };
+          }
+
+          if (position.type === 'top-left') {
+            return {
+              position: 'absolute',
+              top: '0',
+              left: 'clamp(0.5rem, 10%, 5rem)',
+            };
+          }
+
+          if (position.type === 'top-right') {
+            return {
+              position: 'absolute',
+              top: '0',
+              right: 'clamp(0.5rem, 10%, 5rem)',
+            };
+          }
+
+          // Circular positioning for 3+ opponents
+          // Use a semi-circle arc with center at bottom
+          const radiusX = 45; // percentage from center
+          const radiusY = 40; // percentage from center
+          const angleRad = (position.angle * Math.PI) / 180;
+
+          // Calculate position on the arc
+          const x = 50 + radiusX * Math.sin(angleRad);
+          const y = 5 + radiusY * (1 - Math.cos(angleRad));
+
+          return {
             position: 'absolute',
-            top: '0',
-            left: '50%',
-            transform: 'translateX(-50%)',
-          },
-          'top-left': {
-            position: 'absolute',
-            top: '0',
-            left: 'clamp(0.5rem, 10%, 5rem)',
-          },
-          'top-right': {
-            position: 'absolute',
-            top: '0',
-            right: 'clamp(0.5rem, 10%, 5rem)',
-          },
-          'left': {
-            position: 'absolute',
-            top: '50%',
-            left: '0',
-            transform: 'translateY(-50%)',
-          },
-          'right': {
-            position: 'absolute',
-            top: '50%',
-            right: '0',
-            transform: 'translateY(-50%)',
-          },
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: 'translate(-50%, -50%)',
+          };
         };
+
+        const positionStyle = getPositionStyle();
 
         return (
           <div
             key={opponent.uid}
             className="opponent-card"
             style={{
-              ...positionStyles[position],
+              ...positionStyle,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',

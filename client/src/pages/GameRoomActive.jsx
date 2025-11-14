@@ -36,7 +36,7 @@ export default function GameRoomActive({ game, user, gameId }) {
   // Get my player data
   const myPlayer = game.players?.find(p => p.uid === user?.uid);
 
-  // Determine player position for animations
+  // Determine player position for animations (circular layout)
   const getPlayerPosition = (playerUid) => {
     if (playerUid === user?.uid) return 'you';
 
@@ -47,10 +47,12 @@ export default function GameRoomActive({ game, user, gameId }) {
     if (opponents.length === 2) {
       return opponentIndex === 0 ? 'opponent-left' : 'opponent-right';
     }
-    // 3 opponents
-    if (opponentIndex === 0) return 'opponent-left';
-    if (opponentIndex === 1) return 'opponent-top';
-    return 'opponent-right';
+
+    // For 3+ opponents, use circular positioning with angles
+    const angleStep = 180 / (opponents.length + 1);
+    const angle = -90 + (angleStep * (opponentIndex + 1));
+
+    return `opponent-${opponentIndex}-${angle}`;
   };
 
   // Watch for new game actions and trigger animations
