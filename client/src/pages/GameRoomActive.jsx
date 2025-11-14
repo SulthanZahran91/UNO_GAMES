@@ -26,6 +26,9 @@ export default function GameRoomActive({ game, user, gameId }) {
   // Subscribe to player's hand from subcollection
   const { hand: myHand, loading: handLoading } = usePlayerHand(gameId, user?.uid);
 
+  // Get my player metadata (from main game document)
+  const myPlayer = game.players?.find(p => p.uid === user?.uid);
+
   console.log('🎮 GameRoomActive render:', {
     gameId,
     userId: user?.uid,
@@ -41,9 +44,6 @@ export default function GameRoomActive({ game, user, gameId }) {
   // Find current player
   const currentPlayer = game.players?.[game.currentPlayerIndex];
   const isMyTurn = currentPlayer?.uid === user?.uid;
-
-  // Get my player metadata (from main game document)
-  const myPlayer = game.players?.find(p => p.uid === user?.uid);
 
   // Determine player position for animations (circular layout)
   const getPlayerPosition = (playerUid) => {
