@@ -349,6 +349,7 @@ export const playCard = onCall(async (request) => {
     const playerHand = playerData.hand || [];
 
     await db.runTransaction(async (transaction) => {
+      // STEP 1: Perform ALL reads first (Firestore requirement)
       const gameDoc = await transaction.get(gameRef);
 
       if (!gameDoc.exists) {
@@ -414,11 +415,30 @@ export const playCard = onCall(async (request) => {
         status = 'finished';
       }
 
-      // Apply card effect
+      // Apply card effect (determine which players will be affected)
       const cardEffects = applyCardEffect(card, {
         ...gameData,
         players: updatedPlayers,
       }, chosenColor);
+
+      // Read affected players' hands BEFORE any writes (for Draw 2 and Draw 4 effects)
+      const affectedPlayersData = new Map();
+      if (cardEffects.cardsToAdd && cardEffects.cardsToAdd.length > 0) {
+        for (const cardAddition of cardEffects.cardsToAdd) {
+          const affectedPlayerRef = gameRef.collection('players').doc(cardAddition.playerUid);
+          const affectedPlayerDoc = await transaction.get(affectedPlayerRef);
+
+          if (affectedPlayerDoc.exists) {
+            affectedPlayersData.set(cardAddition.playerUid, {
+              ref: affectedPlayerRef,
+              hand: affectedPlayerDoc.data().hand || [],
+              cardsToAdd: cardAddition.cards,
+            });
+          }
+        }
+      }
+
+      // STEP 2: Perform ALL writes (after all reads are complete)
 
       // Keep only last 20 log entries (pagination optimization)
       const currentLog = cardEffects.gameLog || gameData.gameLog;
@@ -450,21 +470,12 @@ export const playCard = onCall(async (request) => {
         updatedAt: FieldValue.serverTimestamp(),
       });
 
-      // Handle cards to add to other players (for Draw 2 and Draw 4 effects)
-      if (cardEffects.cardsToAdd && cardEffects.cardsToAdd.length > 0) {
-        for (const cardAddition of cardEffects.cardsToAdd) {
-          const affectedPlayerRef = gameRef.collection('players').doc(cardAddition.playerUid);
-          const affectedPlayerDoc = await transaction.get(affectedPlayerRef);
-
-          if (affectedPlayerDoc.exists) {
-            const affectedPlayerData = affectedPlayerDoc.data();
-            const affectedPlayerHand = affectedPlayerData.hand || [];
-            transaction.update(affectedPlayerRef, {
-              hand: [...affectedPlayerHand, ...cardAddition.cards],
-              updatedAt: FieldValue.serverTimestamp(),
-            });
-          }
-        }
+      // Update affected players' hands (cards were already read above)
+      for (const [playerUid, playerInfo] of affectedPlayersData) {
+        transaction.update(playerInfo.ref, {
+          hand: [...playerInfo.hand, ...playerInfo.cardsToAdd],
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       }
 
       console.log('✅ Card played successfully:', {
