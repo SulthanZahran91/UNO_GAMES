@@ -7,6 +7,7 @@ import TurnIndicator from '../components/TurnIndicator';
 import ActionNotification from '../components/ActionNotification';
 import CardAnimation from '../components/CardAnimation';
 import ConnectionStatus from '../components/ConnectionStatus';
+import { usePlayerHand } from '../hooks/usePlayerHand';
 import { playCard as playCardService, drawCard as drawCardService } from '../services/gameFunctions';
 
 /**
@@ -22,18 +23,22 @@ export default function GameRoomActive({ game, user, gameId }) {
   const [activeAnimation, setActiveAnimation] = useState(null);
   const lastGameLogLength = useRef(0);
 
+  // Subscribe to player's hand from subcollection
+  const { hand: myHand, loading: handLoading } = usePlayerHand(gameId, user?.uid);
+
   console.log('🎮 GameRoomActive render:', {
     gameId,
     userId: user?.uid,
     currentPlayerIndex: game.currentPlayerIndex,
     status: game.status,
+    myHandCount: myHand?.length || 0,
   });
 
   // Find current player
   const currentPlayer = game.players?.[game.currentPlayerIndex];
   const isMyTurn = currentPlayer?.uid === user?.uid;
 
-  // Get my player data
+  // Get my player metadata (from main game document)
   const myPlayer = game.players?.find(p => p.uid === user?.uid);
 
   // Determine player position for animations (circular layout)
@@ -246,9 +251,9 @@ export default function GameRoomActive({ game, user, gameId }) {
       </div>
 
       {/* Player's Hand */}
-      {myPlayer && (
+      {myPlayer && !handLoading && (
         <PlayerHand
-          hand={myPlayer.hand}
+          hand={myHand || []}
           onCardClick={handleCardClick}
           currentCard={game.currentCard}
           activeColor={game.activeColor}

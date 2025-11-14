@@ -119,7 +119,7 @@ export default function OpponentDisplay({
               animation: isCurrentPlayer ? 'pulse 2s infinite' : 'none',
             }}
             role="status"
-            aria-label={`${opponent.displayName}, ${opponent.hand?.length || 0} cards${isCurrentPlayer ? ', current turn' : ''}`}
+            aria-label={`${opponent.displayName}, ${opponent.cardCount || 0} cards${isCurrentPlayer ? ', current turn' : ''}`}
           >
             {/* Player Avatar/Icon */}
             <div style={{
@@ -163,14 +163,14 @@ export default function OpponentDisplay({
               <div style={{
                 fontSize: '1.25rem',
                 fontWeight: 'bold',
-                color: opponent.hand?.length === 1 ? '#ff5555' : 'white',
+                color: opponent.cardCount === 1 ? '#ff5555' : 'white',
               }}>
-                × {opponent.hand?.length || 0}
+                × {opponent.cardCount || 0}
               </div>
             </div>
 
             {/* UNO Warning */}
-            {opponent.hand?.length === 1 && (
+            {opponent.cardCount === 1 && (
               <div style={{
                 background: '#ff5555',
                 color: 'white',
