@@ -259,14 +259,76 @@ export default function GameRoom({ user }) {
             borderRadius: '8px',
             textAlign: 'center',
           }}>
-            <h2 style={{ marginBottom: '10px', fontSize: '24px' }}>
+            <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>
               🏆 Game Over!
             </h2>
-            {game.winner && (
-              <p style={{ fontSize: '18px', marginBottom: '20px' }}>
-                Winner: {game.players?.find(p => p.uid === game.winner)?.displayName || 'Unknown'}
-              </p>
+
+            {/* Display Rankings */}
+            {game.winners && game.winners.length > 0 && (
+              <div style={{ marginBottom: '20px', textAlign: 'left', maxWidth: '400px', margin: '0 auto 20px' }}>
+                <h3 style={{ marginBottom: '10px', textAlign: 'center' }}>Final Rankings:</h3>
+                {game.winners.map((winnerUid, index) => {
+                  const player = game.players?.find(p => p.uid === winnerUid);
+                  const position = index + 1;
+                  const getOrdinal = (n) => {
+                    const j = n % 10;
+                    const k = n % 100;
+                    if (j === 1 && k !== 11) return 'st';
+                    if (j === 2 && k !== 12) return 'nd';
+                    if (j === 3 && k !== 13) return 'rd';
+                    return 'th';
+                  };
+                  const medals = ['🥇', '🥈', '🥉'];
+                  const icon = index < 3 ? medals[index] : `${position}${getOrdinal(position)}`;
+
+                  return (
+                    <div key={winnerUid} style={{
+                      padding: '10px',
+                      marginBottom: '5px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      borderRadius: '5px',
+                      fontSize: '16px',
+                    }}>
+                      <span style={{ marginRight: '10px' }}>{icon}</span>
+                      {player?.displayName || 'Unknown'}
+                    </div>
+                  );
+                })}
+
+                {/* Show last place player if exists */}
+                {(() => {
+                  const lastPlacePlayer = game.players?.find(p =>
+                    !game.winners.includes(p.uid)
+                  );
+                  if (lastPlacePlayer) {
+                    const position = game.winners.length + 1;
+                    const getOrdinal = (n) => {
+                      const j = n % 10;
+                      const k = n % 100;
+                      if (j === 1 && k !== 11) return 'st';
+                      if (j === 2 && k !== 12) return 'nd';
+                      if (j === 3 && k !== 13) return 'rd';
+                      return 'th';
+                    };
+                    return (
+                      <div style={{
+                        padding: '10px',
+                        marginBottom: '5px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '5px',
+                        fontSize: '16px',
+                        opacity: 0.7,
+                      }}>
+                        <span style={{ marginRight: '10px' }}>{position}{getOrdinal(position)}</span>
+                        {lastPlacePlayer.displayName}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
             )}
+
             <Link to="/">
               <button style={{ fontSize: '16px' }}>
                 🏠 Back to Lobby

@@ -14,6 +14,20 @@ const db = getFirestore();
 console.log('📊 Firebase Admin initialized');
 
 /**
+ * Helper function to get ordinal suffix for numbers (1st, 2nd, 3rd, etc.)
+ * @param {number} num - The number to get suffix for
+ * @returns {string} The ordinal suffix (st, nd, rd, th)
+ */
+function getOrdinalSuffix(num) {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) return 'st';
+  if (j === 2 && k !== 12) return 'nd';
+  if (j === 3 && k !== 13) return 'rd';
+  return 'th';
+}
+
+/**
  * Creates a new UNO game
  * @returns {Promise<{gameId: string}>}
  */
@@ -53,7 +67,7 @@ export const createGame = onCall(async (request) => {
       currentPlayerIndex: 0,
       direction: 'clockwise',
       gameLog: [`Game created by ${displayName}`],
-      winner: null,
+      winners: [], // Track winners in order (1st, 2nd, 3rd, etc.)
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
@@ -421,9 +435,15 @@ export const playCard = onCall(async (request) => {
         return p;
       });
 
-      // Check for win - game ends when only one player has cards left
-      let winner = null;
+      // Check for winners - track players in order of finishing
+      let winners = gameData.winners || [];
       let status = gameData.status;
+
+      // If current player finished their cards, add them to winners list
+      if (updatedHand.length === 0 && !winners.includes(userId)) {
+        winners = [...winners, userId];
+        console.log(`🏆 ${currentPlayer.displayName} finishes in position ${winners.length}!`);
+      }
 
       // Count how many players still have cards (including current player with updated hand)
       const playersWithCards = updatedPlayers.filter(p => {
@@ -436,14 +456,15 @@ export const playCard = onCall(async (request) => {
 
       console.log(`📊 Players with cards remaining: ${playersWithCards.length}/${updatedPlayers.length}`);
 
-      // If only one player has cards left, they win
-      if (playersWithCards.length === 1) {
-        winner = playersWithCards[0].uid;
+      // If only one player has cards left (or no players), game ends
+      if (playersWithCards.length <= 1) {
         status = 'finished';
-        console.log('🏆 Last player standing wins!', playersWithCards[0].displayName);
-      } else if (updatedHand.length === 0) {
-        // Current player is out but game continues
-        console.log(`✅ ${currentPlayer.displayName} is out! ${playersWithCards.length} players remaining.`);
+        if (playersWithCards.length === 1) {
+          // Last player with cards is in last place (don't add to winners)
+          console.log('🏁 Game over! Last player:', playersWithCards[0].displayName);
+        } else {
+          console.log('🏁 Game over! All players finished.');
+        }
       }
 
       // Apply card effect (determine which players will be affected)
@@ -478,11 +499,14 @@ export const playCard = onCall(async (request) => {
       // Build updates with field masks (only changed fields)
       // Determine appropriate game log message
       let logMessage = null;
-      if (winner) {
-        const winnerName = updatedPlayers.find(p => p.uid === winner)?.displayName || 'Unknown';
-        logMessage = `🏆 ${winnerName} wins the game! Last player standing!`;
+      if (status === 'finished') {
+        if (playersWithCards.length === 1) {
+          logMessage = `🏁 Game Over! ${playersWithCards[0].displayName} finished last.`;
+        } else {
+          logMessage = `🏁 Game Over!`;
+        }
       } else if (updatedHand.length === 0) {
-        logMessage = `✅ ${currentPlayer.displayName} is out! ${playersWithCards.length} player(s) remaining.`;
+        logMessage = `🏆 ${currentPlayer.displayName} finishes in ${winners.length}${getOrdinalSuffix(winners.length)} place! ${playersWithCards.length} player(s) remaining.`;
       }
 
       const updates = {
@@ -502,7 +526,7 @@ export const playCard = onCall(async (request) => {
       else updates.players = updatedPlayers;
       if (cardEffects.pendingDrawCount !== undefined) updates.pendingDrawCount = cardEffects.pendingDrawCount;
       if (status !== gameData.status) updates.status = status;
-      if (winner) updates.winner = winner;
+      if (winners.length > 0) updates.winners = winners;
 
       transaction.update(gameRef, updates);
 
@@ -524,7 +548,7 @@ export const playCard = onCall(async (request) => {
         gameId,
         card,
         newStatus: status,
-        winner,
+        winnersCount: winners.length,
       });
     });
 
