@@ -336,19 +336,31 @@ export const playCard = onCall(async (request) => {
   }
 
   const userId = request.auth.uid;
-  const { gameId, cardIndex, chosenColor } = request.data || {};
+  const { gameId, cardIndex, cardIndices, chosenColor } = request.data || {};
 
   if (!gameId) {
     console.error('❌ playCard: Missing gameId');
     throw new HttpsError('invalid-argument', 'gameId is required');
   }
 
-  if (cardIndex === undefined || cardIndex === null) {
-    console.error('❌ playCard: Missing cardIndex');
-    throw new HttpsError('invalid-argument', 'cardIndex is required');
+  // Support both single card (cardIndex) and multiple cards (cardIndices)
+  let indicesToPlay = [];
+  if (cardIndices !== undefined && cardIndices !== null) {
+    // Multiple cards (number stacking)
+    if (!Array.isArray(cardIndices) || cardIndices.length === 0) {
+      console.error('❌ playCard: Invalid cardIndices');
+      throw new HttpsError('invalid-argument', 'cardIndices must be a non-empty array');
+    }
+    indicesToPlay = [...cardIndices].sort((a, b) => b - a); // Sort descending for safe removal
+  } else if (cardIndex !== undefined && cardIndex !== null) {
+    // Single card (traditional play)
+    indicesToPlay = [cardIndex];
+  } else {
+    console.error('❌ playCard: Missing cardIndex or cardIndices');
+    throw new HttpsError('invalid-argument', 'cardIndex or cardIndices is required');
   }
 
-  console.log('📝 Playing card:', { gameId, userId, cardIndex, chosenColor });
+  console.log('📝 Playing card(s):', { gameId, userId, indicesToPlay, chosenColor });
 
   try {
     const gameRef = db.collection('games').doc(gameId);
@@ -388,14 +400,40 @@ export const playCard = onCall(async (request) => {
         throw new HttpsError('failed-precondition', 'It is not your turn');
       }
 
-      // Get the card from player's hand
-      if (cardIndex < 0 || cardIndex >= playerHand.length) {
-        console.error('❌ playCard: Invalid card index:', cardIndex);
-        throw new HttpsError('invalid-argument', 'Invalid card index');
+      // Get the cards from player's hand
+      const cardsToPlay = [];
+      for (const idx of indicesToPlay) {
+        if (idx < 0 || idx >= playerHand.length) {
+          console.error('❌ playCard: Invalid card index:', idx);
+          throw new HttpsError('invalid-argument', `Invalid card index: ${idx}`);
+        }
+        cardsToPlay.push(playerHand[idx]);
       }
 
-      const card = playerHand[cardIndex];
-      console.log('🃏 Card to play:', card);
+      console.log('🃏 Card(s) to play:', cardsToPlay);
+
+      // Validate number stacking: all cards must have the same value
+      if (cardsToPlay.length > 1) {
+        const firstValue = cardsToPlay[0].value;
+        const allSameValue = cardsToPlay.every(card => card.value === firstValue);
+
+        if (!allSameValue) {
+          console.error('❌ playCard: Cannot stack cards with different values');
+          throw new HttpsError('invalid-argument', 'All stacked cards must have the same number');
+        }
+
+        // Only number cards (0-9) can be stacked
+        const isNumberCard = /^[0-9]$/.test(firstValue);
+        if (!isNumberCard) {
+          console.error('❌ playCard: Cannot stack non-number cards:', firstValue);
+          throw new HttpsError('invalid-argument', 'Only number cards can be stacked');
+        }
+
+        console.log(`✅ Stacking ${cardsToPlay.length} cards with value ${firstValue}`);
+      }
+
+      // Use the first card for validation (all have same value if stacking)
+      const card = cardsToPlay[0];
 
       // Check if there's a pending draw count
       const pendingDrawCount = gameData.pendingDrawCount || 0;
@@ -424,8 +462,8 @@ export const playCard = onCall(async (request) => {
 
       console.log('✅ Move is valid, applying card effect...');
 
-      // Remove card from player's hand
-      const updatedHand = playerHand.filter((_, i) => i !== cardIndex);
+      // Remove all played cards from player's hand
+      const updatedHand = playerHand.filter((_, i) => !indicesToPlay.includes(i));
 
       // Update player's card count in main document
       const updatedPlayers = gameData.players.map((p, i) => {
@@ -471,7 +509,7 @@ export const playCard = onCall(async (request) => {
       const cardEffects = applyCardEffect(card, {
         ...gameData,
         players: updatedPlayers,
-      }, chosenColor);
+      }, chosenColor, cardsToPlay.length);
 
       // Read affected players' hands BEFORE any writes (for Draw 2 and Draw 4 effects)
       const affectedPlayersData = new Map();
@@ -510,10 +548,10 @@ export const playCard = onCall(async (request) => {
       }
 
       const updates = {
-        currentCard: card,
+        currentCard: card, // Top card is the first one played (last one added)
         activeColor: cardEffects.activeColor,
         currentPlayerIndex: cardEffects.currentPlayerIndex,
-        discardPile: [...gameData.discardPile, card],
+        discardPile: [...gameData.discardPile, ...cardsToPlay], // Add all stacked cards
         gameLog: logMessage ? [...recentLog, logMessage] : recentLog,
         hasDrawnThisTurn: false, // Reset draw flag when playing a card
         updatedAt: FieldValue.serverTimestamp(),

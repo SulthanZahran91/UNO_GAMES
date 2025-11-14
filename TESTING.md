@@ -243,7 +243,7 @@ Use this checklist to verify functionality:
 - [ ] Can join game with valid game ID
 - [ ] Cannot join game with invalid game ID
 - [ ] Cannot join game that's already started
-- [ ] Cannot join game that's full (4 players)
+- [ ] Cannot join game that's full (12 players)
 - [ ] Player list updates in real-time
 - [ ] Host can start game with 2+ players
 - [ ] Non-host cannot start game
@@ -253,6 +253,23 @@ Use this checklist to verify functionality:
 - [ ] Starting card is valid (not wild/draw4)
 - [ ] Game log shows all events
 - [ ] Debug panel shows current state
+
+### Number Stacking Feature Tests
+
+- [ ] Can select multiple cards with Shift/Ctrl/Cmd + Click
+- [ ] Selected cards show visual feedback (lift up, green checkmark)
+- [ ] Can only select cards with the same number
+- [ ] "Play X Cards (Stack)" button appears when 2+ cards selected
+- [ ] Can deselect cards by clicking them again with modifier key
+- [ ] Can play all selected cards at once
+- [ ] Game log shows "played Xx [number] (stacking!)" message
+- [ ] All stacked cards are added to discard pile
+- [ ] Player's card count decreases by number of stacked cards
+- [ ] Cannot stack action cards (Skip, Reverse, Draw 2)
+- [ ] Cannot stack wild cards
+- [ ] Can stack cards of different colors (e.g., Red 5, Blue 5)
+- [ ] First card must be a valid play
+- [ ] Can stack all remaining cards to finish the game
 
 ## 🎯 Next Steps for Development
 

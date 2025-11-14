@@ -82,10 +82,11 @@ export function drawCards(deck, drawPileIndex, count) {
  * @param {Object} card - The card being played
  * @param {Object} gameState - Current game state
  * @param {string} chosenColor - Color chosen for wild cards
+ * @param {number} stackCount - Number of cards being stacked (default 1)
  * @returns {Object} Game state updates including cardsToAdd for affected players
  */
-export function applyCardEffect(card, gameState, chosenColor = null) {
-  console.log('🎴 Applying card effect:', card);
+export function applyCardEffect(card, gameState, chosenColor = null, stackCount = 1) {
+  console.log('🎴 Applying card effect:', card, 'stackCount:', stackCount);
 
   const {
     currentPlayerIndex,
@@ -229,7 +230,13 @@ export function applyCardEffect(card, gameState, chosenColor = null) {
         0,
         players // Pass players to skip eliminated ones
       );
-      updates.gameLog.push(`${currentPlayer.displayName} played ${card.color} ${card.value}`);
+
+      // Show stacking in log if multiple cards played
+      if (stackCount > 1) {
+        updates.gameLog.push(`${currentPlayer.displayName} played ${stackCount}x ${card.value} (stacking!)`);
+      } else {
+        updates.gameLog.push(`${currentPlayer.displayName} played ${card.color} ${card.value}`);
+      }
       break;
     }
   }

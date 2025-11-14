@@ -2,11 +2,12 @@
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Player Capacity](#player-capacity)
-3. [Player Positioning System](#player-positioning-system)
-4. [Animation System](#animation-system)
-5. [File Structure](#file-structure)
-6. [Key Components](#key-components)
+2. [Game Features](#game-features)
+3. [Player Capacity](#player-capacity)
+4. [Player Positioning System](#player-positioning-system)
+5. [Animation System](#animation-system)
+6. [File Structure](#file-structure)
+7. [Key Components](#key-components)
 
 ---
 
@@ -23,6 +24,115 @@ This is a real-time multiplayer UNO card game built with:
 - **Real-time Updates**: Firestore listeners for live game state
 - **Animations**: Enhanced card play and turn animations
 - **Mobile Responsive**: Touch-friendly interface with responsive layouts
+
+---
+
+## Game Features
+
+### Number Stacking
+
+Players can play multiple cards with the same number in a single turn, allowing for strategic plays and faster gameplay.
+
+#### Implementation Details
+
+**Backend** (`functions/index.js:339-436`):
+```javascript
+// Accept both single card and multiple cards
+const { gameId, cardIndex, cardIndices, chosenColor } = request.data || {};
+
+// Support array of indices for stacking
+if (cardIndices !== undefined && cardIndices !== null) {
+  indicesToPlay = [...cardIndices].sort((a, b) => b - a);
+} else if (cardIndex !== undefined && cardIndex !== null) {
+  indicesToPlay = [cardIndex];
+}
+
+// Validate all cards have same value
+if (cardsToPlay.length > 1) {
+  const firstValue = cardsToPlay[0].value;
+  const allSameValue = cardsToPlay.every(card => card.value === firstValue);
+  const isNumberCard = /^[0-9]$/.test(firstValue);
+  // ... validation logic
+}
+```
+
+**Frontend** (`client/src/components/PlayerHand.jsx:52-105`):
+- Hold **Shift/Ctrl/Cmd** and click cards to select multiple
+- Selected cards show visual feedback (lifted up with green checkmark)
+- Click "Play X Cards (Stack)" button to play all selected cards
+- Automatically validates same number value
+
+**Game Logic** (`functions/utils/gameLogic.js:88`):
+```javascript
+export function applyCardEffect(card, gameState, chosenColor = null, stackCount = 1) {
+  // stackCount parameter tracks number of cards being stacked
+  if (stackCount > 1) {
+    updates.gameLog.push(`${currentPlayer.displayName} played ${stackCount}x ${card.value} (stacking!)`);
+  } else {
+    updates.gameLog.push(`${currentPlayer.displayName} played ${card.color} ${card.value}`);
+  }
+}
+```
+
+#### Rules
+- **Only number cards (0-9)** can be stacked
+- **All cards must have the same number value** (e.g., three 5s)
+- **First card must be a valid play** (matching color or number with current card)
+- **Cards can be different colors** (e.g., Red 5, Blue 5, Green 5)
+- **Action cards cannot be stacked** (Skip, Reverse, Draw 2)
+- **Wild cards cannot be stacked**
+
+#### API Request Format
+
+**Single Card**:
+```javascript
+{
+  gameId: "game-123",
+  cardIndex: 2,
+  chosenColor: null
+}
+```
+
+**Multiple Cards (Stacking)**:
+```javascript
+{
+  gameId: "game-123",
+  cardIndices: [0, 2, 4], // Indices of cards in player's hand
+  chosenColor: null
+}
+```
+
+#### Testing
+
+Comprehensive tests in `functions/__tests__/numberStacking.test.js`:
+- Card validation for same value
+- Multi-card validation
+- Game state updates
+- Index handling
+- Discard pile updates
+- Edge cases (stacking all cards, invalid indices, etc.)
+- Integration scenarios
+
+### Draw Card Stacking
+
+Players can stack Draw 2 and Draw 4 cards to increase the penalty for the next player.
+
+**Implementation** (`functions/utils/gameLogic.js:141-169`):
+```javascript
+case 'draw2': {
+  const currentPendingCount = gameState.pendingDrawCount || 0;
+  const newPendingCount = currentPendingCount + 2;
+  updates.pendingDrawCount = newPendingCount;
+  // ...
+}
+```
+
+**Rules**:
+- When a Draw 2/4 is played, `pendingDrawCount` increases
+- Next player must either:
+  - Draw all pending cards and skip turn
+  - Play another Draw 2/4 to stack (increases penalty)
+- Stacks can accumulate (e.g., 3 Draw 2s = 6 cards to draw)
 
 ---
 

@@ -68,18 +68,32 @@ export async function startGame(gameId) {
 }
 
 /**
- * Play a card
+ * Play a card or multiple cards (number stacking)
  * @param {string} gameId - The game ID
- * @param {number} cardIndex - Index of card in player's hand
+ * @param {number|number[]} cardIndexOrIndices - Index of card in player's hand, or array of indices for stacking
  * @param {string|null} chosenColor - Color chosen for wild cards
  * @returns {Promise<{success: boolean}>}
  */
-export async function playCard(gameId, cardIndex, chosenColor = null) {
-  console.log('🃏 Calling playCard function:', { gameId, cardIndex, chosenColor });
+export async function playCard(gameId, cardIndexOrIndices, chosenColor = null) {
+  const isArray = Array.isArray(cardIndexOrIndices);
+  console.log('🃏 Calling playCard function:', {
+    gameId,
+    [isArray ? 'cardIndices' : 'cardIndex']: cardIndexOrIndices,
+    chosenColor,
+  });
 
   try {
     const playCardFn = httpsCallable(functions, 'playCard');
-    const result = await playCardFn({ gameId, cardIndex, chosenColor });
+    const payload = { gameId, chosenColor };
+
+    // Support both single card and multiple cards
+    if (isArray) {
+      payload.cardIndices = cardIndexOrIndices;
+    } else {
+      payload.cardIndex = cardIndexOrIndices;
+    }
+
+    const result = await playCardFn(payload);
 
     console.log('✅ playCard success:', result.data);
     return result.data;
