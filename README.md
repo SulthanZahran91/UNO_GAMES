@@ -88,6 +88,8 @@ UNO_GAMES/
 ## 🎮 Game Features
 
 - **12-Player Support**: Up to 12 players per game with circular layout
+- **Number Stacking**: Play multiple cards with the same number in a single turn
+- **Draw Card Stacking**: Stack Draw 2 and Draw 4 cards to increase penalty
 - **Enhanced Animations**: Dramatic card play animations with special effects for power cards
 - **Turn Indicators**: Clear visual feedback with screen border flash when it's your turn
 - **Mobile Responsive**: Touch-friendly interface optimized for all screen sizes
@@ -100,6 +102,22 @@ UNO_GAMES/
 3. **Start Game**: Host starts the game (deals 7 cards to each player)
 4. **Play**: Players take turns playing cards with animated effects
 5. **Win**: First player to empty their hand wins
+
+### How to Stack Number Cards
+
+**Number Stacking** allows you to play multiple cards with the same number in one turn:
+
+1. **Hold Shift/Ctrl/Cmd** and click on cards with the same number to select them
+2. Selected cards will lift up and show a green checkmark
+3. Click **"Play X Cards (Stack)"** button to play all selected cards at once
+4. Or click on a selected card to play all selected cards
+
+**Rules**:
+- Only number cards (0-9) can be stacked
+- All stacked cards must have the same number value
+- The first card must be a valid play (matching color or number)
+- Cards can be different colors (e.g., Red 5, Blue 5, Green 5)
+- Action cards (Skip, Reverse, Draw 2) cannot be stacked this way
 
 ## 📚 Documentation
 

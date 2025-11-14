@@ -153,6 +153,40 @@ export default function GameRoomActive({ game, user, gameId }) {
     }
   };
 
+  const handleMultiCardPlay = async (cardIndices) => {
+    console.log('🎴 Playing multiple cards:', { cardIndices });
+
+    if (!isMyTurn) {
+      setActionError('It is not your turn');
+      return;
+    }
+
+    // Validate all cards are the same number
+    const cardsToPlay = cardIndices.map(idx => myHand[idx]);
+    const firstValue = cardsToPlay[0].value;
+    const allSameValue = cardsToPlay.every(card => card.value === firstValue);
+
+    if (!allSameValue) {
+      setActionError('All stacked cards must have the same number');
+      setTimeout(() => setActionError(null), 3000);
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      await playCardService(gameId, cardIndices);
+      console.log('✅ Cards played successfully');
+    } catch (err) {
+      console.error('❌ Failed to play cards:', err);
+      setActionError(err.message || 'Failed to play cards');
+      setTimeout(() => setActionError(null), 3000);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleDrawCard = async () => {
     console.log('🎴 Drawing card');
 
@@ -341,6 +375,7 @@ export default function GameRoomActive({ game, user, gameId }) {
       <PlayerHand
         hand={myHand || []}
         onCardClick={handleCardClick}
+        onMultiCardPlay={handleMultiCardPlay}
         currentCard={game.currentCard}
         activeColor={game.activeColor}
         disabled={!isMyTurn || actionLoading}
