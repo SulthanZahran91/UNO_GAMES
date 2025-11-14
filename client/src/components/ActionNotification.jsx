@@ -1,6 +1,7 @@
 /**
  * Action Notification Component
  * Shows recent game actions with animations
+ * Mobile optimized: Shows max 2 notifications with 4s auto-dismiss
  */
 
 import { useState, useEffect } from 'react';
@@ -11,9 +12,16 @@ export default function ActionNotification({ gameLog }) {
   useEffect(() => {
     if (!gameLog || gameLog.length === 0) return;
 
-    // Get the last 3 actions
-    const latest = gameLog.slice(-3).reverse();
+    // Get the last 2 actions (reduced for mobile readability)
+    const latest = gameLog.slice(-2).reverse();
     setRecentActions(latest);
+
+    // Auto-dismiss after 4 seconds
+    const timer = setTimeout(() => {
+      setRecentActions([]);
+    }, 4000);
+
+    return () => clearTimeout(timer);
   }, [gameLog]);
 
   if (recentActions.length === 0) return null;
