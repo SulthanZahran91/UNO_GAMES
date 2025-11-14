@@ -8,7 +8,8 @@ import ActionNotification from '../components/ActionNotification';
 import CardAnimation from '../components/CardAnimation';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { usePlayerHand } from '../hooks/usePlayerHand';
-import { playCard as playCardService, drawCard as drawCardService } from '../services/gameFunctions';
+import { playCard as playCardService, drawCard as drawCardService, skipTurn as skipTurnService } from '../services/gameFunctions';
+import { canPlayCard } from '../utils/cardValidation';
 
 /**
  * Active Game Room Component
@@ -175,7 +176,33 @@ export default function GameRoomActive({ game, user, gameId }) {
     }
   };
 
+  const handleSkipTurn = async () => {
+    console.log('⏭️ Skipping turn');
+
+    if (!isMyTurn) {
+      setActionError('It is not your turn');
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      await skipTurnService(gameId);
+      console.log('✅ Turn skipped successfully');
+    } catch (err) {
+      console.error('❌ Failed to skip turn:', err);
+      setActionError(err.message || 'Failed to skip turn');
+      setTimeout(() => setActionError(null), 3000);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const drawPileCount = game.drawPile?.length - game.drawPileIndex || 0;
+  const pendingDrawCount = game.pendingDrawCount || 0;
+  const hasDrawnThisTurn = game.hasDrawnThisTurn || false;
+  const canSkipTurn = isMyTurn && hasDrawnThisTurn && !actionLoading;
 
   return (
     <div style={{
@@ -249,10 +276,66 @@ export default function GameRoomActive({ game, user, gameId }) {
           currentPlayerIndex={game.currentPlayerIndex}
           players={game.players}
           onDrawCard={handleDrawCard}
-          canDraw={isMyTurn && !actionLoading}
+          canDraw={isMyTurn && !actionLoading && !hasDrawnThisTurn}
           drawPileCount={drawPileCount}
         />
       </div>
+
+      {/* Pending Draw Warning */}
+      {pendingDrawCount > 0 && (
+        <div style={{
+          marginBottom: 'clamp(0.75rem, 2.5vw, 1.25rem)',
+          padding: 'clamp(0.75rem, 2.5vw, 1rem)',
+          background: 'rgba(255, 85, 85, 0.2)',
+          borderRadius: 'clamp(0.5rem, 2vw, 0.75rem)',
+          border: '0.125rem solid rgba(255, 85, 85, 0.4)',
+          textAlign: 'center',
+          fontSize: 'clamp(0.875rem, 3vw, 1rem)',
+          color: '#ff5555',
+          fontWeight: 'bold',
+        }}>
+          ⚠️ {pendingDrawCount} cards stacked! Draw them or play a Draw 2/Draw 4 to stack!
+        </div>
+      )}
+
+      {/* Skip Turn Button */}
+      {canSkipTurn && (
+        <div style={{
+          marginBottom: 'clamp(0.75rem, 2.5vw, 1.25rem)',
+          display: 'flex',
+          justifyContent: 'center',
+        }}>
+          <button
+            onClick={handleSkipTurn}
+            disabled={actionLoading}
+            style={{
+              padding: 'clamp(0.625rem, 2.5vw, 0.875rem) clamp(1.25rem, 4vw, 2rem)',
+              fontSize: 'clamp(0.875rem, 3vw, 1rem)',
+              fontWeight: 'bold',
+              color: 'white',
+              background: actionLoading ? '#666' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              borderRadius: 'clamp(0.5rem, 2vw, 0.75rem)',
+              cursor: actionLoading ? 'not-allowed' : 'pointer',
+              boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease',
+              opacity: actionLoading ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!actionLoading) {
+                e.target.style.transform = 'translateY(-0.125rem)';
+                e.target.style.boxShadow = '0 0.375rem 1rem rgba(0, 0, 0, 0.4)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 0.25rem 0.75rem rgba(0, 0, 0, 0.3)';
+            }}
+          >
+            ⏭️ Skip Turn
+          </button>
+        </div>
+      )}
 
       {/* Player's Hand */}
       <PlayerHand
@@ -262,6 +345,7 @@ export default function GameRoomActive({ game, user, gameId }) {
         activeColor={game.activeColor}
         disabled={!isMyTurn || actionLoading}
         loading={handLoading}
+        pendingDrawCount={pendingDrawCount}
       />
 
       {/* Card Animations */}

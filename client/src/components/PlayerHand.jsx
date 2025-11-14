@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Card from './Card';
-import { isValidMove } from '../utils/cardValidation';
+import { canPlayCard } from '../utils/cardValidation';
 
 /**
  * Player Hand Component
@@ -14,7 +14,8 @@ export default function PlayerHand({
   currentCard,
   activeColor,
   disabled = false,
-  loading = false
+  loading = false,
+  pendingDrawCount = 0
 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -95,7 +96,7 @@ export default function PlayerHand({
           const playable = !disabled &&
                           currentCard &&
                           activeColor &&
-                          isValidMove(card, currentCard, activeColor);
+                          canPlayCard(card, currentCard, activeColor, pendingDrawCount);
 
           return (
             <Card
