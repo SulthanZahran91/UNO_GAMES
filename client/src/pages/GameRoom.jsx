@@ -134,7 +134,7 @@ export default function GameRoom({ user }) {
           marginBottom: '20px',
         }}>
           <h2 style={{ marginBottom: '15px', fontSize: '18px' }}>
-            👥 Players ({playerCount}/4)
+            👥 Players ({playerCount}/12)
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {game.players?.map((player, index) => (
@@ -170,7 +170,7 @@ export default function GameRoom({ user }) {
               </div>
             ))}
           </div>
-          {playerCount < 4 && game.status === 'waiting' && (
+          {playerCount < 12 && game.status === 'waiting' && (
             <div style={{
               marginTop: '15px',
               padding: '12px',
