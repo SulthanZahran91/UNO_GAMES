@@ -5,6 +5,8 @@ import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import DebugPanel from './components/DebugPanel';
 import Lobby from './pages/Lobby';
 import GameRoom from './pages/GameRoom';
+import UpdateNotification from './components/UpdateNotification';
+import { useVersionCheck } from './hooks/useVersionCheck';
 
 console.log('🎮 App component loaded');
 
@@ -13,6 +15,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [debugData, setDebugData] = useState({});
+
+  // Check for new versions every 3 minutes
+  const { hasNewVersion, dismissUpdate } = useVersionCheck(3 * 60 * 1000);
 
   useEffect(() => {
     console.log('🔐 Setting up auth listener');
@@ -107,6 +112,11 @@ function App() {
   return (
     <Router>
       <div className="app">
+        <UpdateNotification
+          show={hasNewVersion}
+          onRefresh={() => window.location.reload(true)}
+          onDismiss={dismissUpdate}
+        />
         <Routes>
           <Route path="/" element={<Lobby user={user} />} />
           <Route path="/game/:gameId" element={<GameRoom user={user} />} />

@@ -28,6 +28,42 @@ function getOrdinalSuffix(num) {
 }
 
 /**
+ * Helper function to check automatic game-ending conditions
+ * @param {Object} gameData - Current game state
+ * @param {Object} updatedPlayers - Updated players array
+ * @returns {Object} {shouldEnd: boolean, reason: string, status: string}
+ */
+function checkAutoEndConditions(gameData, updatedPlayers) {
+  // Check 1: If any player has more than 40 cards
+  const playerWithTooManyCards = updatedPlayers.find(p => p.cardCount > 40);
+  if (playerWithTooManyCards) {
+    return {
+      shouldEnd: true,
+      reason: `🛑 Game ended: ${playerWithTooManyCards.displayName} has more than 40 cards!`,
+      status: 'finished'
+    };
+  }
+
+  // Check 2: If no actions for more than 10 minutes (600000 milliseconds)
+  if (gameData.lastActionAt) {
+    const now = Date.now();
+    const lastActionTime = gameData.lastActionAt.toMillis ? gameData.lastActionAt.toMillis() : gameData.lastActionAt;
+    const timeSinceLastAction = now - lastActionTime;
+    const TEN_MINUTES = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+    if (timeSinceLastAction > TEN_MINUTES) {
+      return {
+        shouldEnd: true,
+        reason: '🛑 Game ended: No activity for more than 10 minutes',
+        status: 'finished'
+      };
+    }
+  }
+
+  return { shouldEnd: false };
+}
+
+/**
  * Creates a new UNO game
  * @returns {Promise<{gameId: string}>}
  */
@@ -275,6 +311,7 @@ export const startGame = onCall(async (request) => {
         hasDrawnThisTurn: false, // Track if player drew this turn
         turnStartedAt: FieldValue.serverTimestamp(), // Track when turn started for timeout
         turnTimeoutSeconds: 15, // 15 second timeout
+        lastActionAt: FieldValue.serverTimestamp(), // Track last action for inactivity detection
         gameLog: [...recentLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -388,6 +425,19 @@ export const playCard = onCall(async (request) => {
       }
 
       const gameData = gameDoc.data();
+
+      // Check for automatic game-ending conditions (inactivity)
+      const autoEndCheck = checkAutoEndConditions(gameData, gameData.players);
+      if (autoEndCheck.shouldEnd) {
+        console.log('⚠️ Auto-ending game:', autoEndCheck.reason);
+        const recentLog = gameData.gameLog.slice(-20);
+        transaction.update(gameRef, {
+          status: autoEndCheck.status,
+          gameLog: [...recentLog, autoEndCheck.reason],
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        throw new HttpsError('failed-precondition', autoEndCheck.reason);
+      }
 
       // Validate: game must be in progress
       if (gameData.status !== 'in-progress') {
@@ -557,6 +607,7 @@ export const playCard = onCall(async (request) => {
         gameLog: logMessage ? [...recentLog, logMessage] : recentLog,
         hasDrawnThisTurn: false, // Reset draw flag when playing a card
         turnStartedAt: FieldValue.serverTimestamp(), // Reset turn timer
+        lastActionAt: FieldValue.serverTimestamp(), // Update last action time
         updatedAt: FieldValue.serverTimestamp(),
       };
 
@@ -650,6 +701,19 @@ export const drawCard = onCall(async (request) => {
 
       const gameData = gameDoc.data();
 
+      // Check for automatic game-ending conditions (inactivity)
+      const autoEndCheck = checkAutoEndConditions(gameData, gameData.players);
+      if (autoEndCheck.shouldEnd) {
+        console.log('⚠️ Auto-ending game:', autoEndCheck.reason);
+        const recentLog = gameData.gameLog.slice(-20);
+        transaction.update(gameRef, {
+          status: autoEndCheck.status,
+          gameLog: [...recentLog, autoEndCheck.reason],
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        throw new HttpsError('failed-precondition', autoEndCheck.reason);
+      }
+
       // Validate: game must be in progress
       if (gameData.status !== 'in-progress') {
         console.error('❌ drawCard: Game not in progress:', gameData.status);
@@ -704,15 +768,32 @@ export const drawCard = onCall(async (request) => {
         return p;
       });
 
+      // Check for 40-card limit after drawing
+      const cardLimitCheck = checkAutoEndConditions(gameData, updatedPlayers);
+      let gameStatus = gameData.status;
+
       // Keep only last 20 log entries (pagination optimization)
       const recentLog = gameData.gameLog.slice(-20);
+      let gameLog = recentLog;
+
+      if (cardLimitCheck.shouldEnd) {
+        console.log('⚠️ Auto-ending game due to card limit:', cardLimitCheck.reason);
+        gameStatus = 'finished';
+        gameLog = [...recentLog, cardLimitCheck.reason];
+      }
 
       // Build updates object
       const updates = {
         players: updatedPlayers,
         drawPileIndex: newIndex,
+        lastActionAt: FieldValue.serverTimestamp(), // Update last action time
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // Add status if game ended
+      if (gameStatus !== gameData.status) {
+        updates.status = gameStatus;
+      }
 
       // If this was a penalty draw, advance turn and reset pendingDrawCount
       if (isPenaltyDraw) {
@@ -727,11 +808,19 @@ export const drawCard = onCall(async (request) => {
         updates.pendingDrawCount = 0;
         updates.hasDrawnThisTurn = false;
         updates.turnStartedAt = FieldValue.serverTimestamp(); // Reset turn timer
-        updates.gameLog = [...recentLog, `${currentPlayer.displayName} drew ${cardsToDraw} cards!`];
+        if (!cardLimitCheck.shouldEnd) {
+          updates.gameLog = [...gameLog, `${currentPlayer.displayName} drew ${cardsToDraw} cards!`];
+        } else {
+          updates.gameLog = gameLog;
+        }
       } else {
         // Normal draw - allow player to play or skip
         updates.hasDrawnThisTurn = true;
-        updates.gameLog = [...recentLog, `${currentPlayer.displayName} drew a card`];
+        if (!cardLimitCheck.shouldEnd) {
+          updates.gameLog = [...gameLog, `${currentPlayer.displayName} drew a card`];
+        } else {
+          updates.gameLog = gameLog;
+        }
       }
 
       // Only update drawPile if it was reshuffled
@@ -800,6 +889,19 @@ export const skipTurn = onCall(async (request) => {
 
       const gameData = gameDoc.data();
 
+      // Check for automatic game-ending conditions (inactivity)
+      const autoEndCheck = checkAutoEndConditions(gameData, gameData.players);
+      if (autoEndCheck.shouldEnd) {
+        console.log('⚠️ Auto-ending game:', autoEndCheck.reason);
+        const recentLog = gameData.gameLog.slice(-20);
+        transaction.update(gameRef, {
+          status: autoEndCheck.status,
+          gameLog: [...recentLog, autoEndCheck.reason],
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        throw new HttpsError('failed-precondition', autoEndCheck.reason);
+      }
+
       // Validate: game must be in progress
       if (gameData.status !== 'in-progress') {
         console.error('❌ skipTurn: Game not in progress:', gameData.status);
@@ -838,6 +940,7 @@ export const skipTurn = onCall(async (request) => {
         currentPlayerIndex: nextPlayerIndex,
         hasDrawnThisTurn: false,
         turnStartedAt: FieldValue.serverTimestamp(), // Reset turn timer
+        lastActionAt: FieldValue.serverTimestamp(), // Update last action time
         gameLog: [...recentLog, `${currentPlayer.displayName} skipped their turn`],
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -907,6 +1010,20 @@ export const forceDrawAndSkip = onCall(async (request) => {
 
       const gameData = gameDoc.data();
 
+      // Check for automatic game-ending conditions (inactivity)
+      // Note: We don't throw here because timeout might have already ended the game
+      const autoEndCheck = checkAutoEndConditions(gameData, gameData.players);
+      if (autoEndCheck.shouldEnd) {
+        console.log('⚠️ Auto-ending game:', autoEndCheck.reason);
+        const recentLog = gameData.gameLog.slice(-20);
+        transaction.update(gameRef, {
+          status: autoEndCheck.status,
+          gameLog: [...recentLog, autoEndCheck.reason],
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return; // Exit silently
+      }
+
       // Validate: game must be in progress
       if (gameData.status !== 'in-progress') {
         console.log('⚠️ forceDrawAndSkip: Game not in progress, ignoring timeout');
@@ -937,6 +1054,7 @@ export const forceDrawAndSkip = onCall(async (request) => {
           currentPlayerIndex: nextPlayerIndex,
           hasDrawnThisTurn: false,
           turnStartedAt: FieldValue.serverTimestamp(),
+          lastActionAt: FieldValue.serverTimestamp(), // Update last action time
           gameLog: [...recentLog, `⏱️ ${currentPlayer.displayName} ran out of time and skipped their turn`],
           updatedAt: FieldValue.serverTimestamp(),
         };
@@ -984,6 +1102,10 @@ export const forceDrawAndSkip = onCall(async (request) => {
         return p;
       });
 
+      // Check for 40-card limit after drawing
+      const cardLimitCheck = checkAutoEndConditions(gameData, updatedPlayers);
+      let gameStatus = gameData.status;
+
       // Advance turn
       const nextPlayerIndex = getNextPlayerIndex(
         gameData.currentPlayerIndex,
@@ -995,6 +1117,13 @@ export const forceDrawAndSkip = onCall(async (request) => {
 
       // Keep only last 20 log entries
       const recentLog = gameData.gameLog.slice(-20);
+      let gameLog = [...recentLog, `⏱️ ${currentPlayer.displayName} ran out of time! Drew ${cardsToDraw} card(s) and skipped their turn`];
+
+      if (cardLimitCheck.shouldEnd) {
+        console.log('⚠️ Auto-ending game due to card limit:', cardLimitCheck.reason);
+        gameStatus = 'finished';
+        gameLog = [...gameLog, cardLimitCheck.reason];
+      }
 
       // Build updates object
       const updates = {
@@ -1004,9 +1133,15 @@ export const forceDrawAndSkip = onCall(async (request) => {
         pendingDrawCount: 0,
         hasDrawnThisTurn: false,
         turnStartedAt: FieldValue.serverTimestamp(),
-        gameLog: [...recentLog, `⏱️ ${currentPlayer.displayName} ran out of time! Drew ${cardsToDraw} card(s) and skipped their turn`],
+        lastActionAt: FieldValue.serverTimestamp(), // Update last action time
+        gameLog: gameLog,
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // Add status if game ended
+      if (gameStatus !== gameData.status) {
+        updates.status = gameStatus;
+      }
 
       // Only update drawPile if it was reshuffled
       if (drawPile !== gameData.drawPile) {
