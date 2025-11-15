@@ -142,3 +142,23 @@ export async function skipTurn(gameId) {
     throw error;
   }
 }
+
+/**
+ * Force draw and skip turn when timeout occurs
+ * @param {string} gameId - The game ID
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function forceDrawAndSkip(gameId) {
+  console.log('⏱️ Calling forceDrawAndSkip function:', { gameId });
+
+  try {
+    const forceDrawAndSkipFn = httpsCallable(functions, 'forceDrawAndSkip');
+    const result = await forceDrawAndSkipFn({ gameId });
+
+    console.log('✅ forceDrawAndSkip success:', result.data);
+    return result.data;
+  } catch (error) {
+    console.error('❌ forceDrawAndSkip error:', error);
+    throw error;
+  }
+}

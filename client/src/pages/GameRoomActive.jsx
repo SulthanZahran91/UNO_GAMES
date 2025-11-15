@@ -8,7 +8,7 @@ import ActionNotification from '../components/ActionNotification';
 import CardAnimation from '../components/CardAnimation';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { usePlayerHand } from '../hooks/usePlayerHand';
-import { playCard as playCardService, drawCard as drawCardService, skipTurn as skipTurnService } from '../services/gameFunctions';
+import { playCard as playCardService, drawCard as drawCardService, skipTurn as skipTurnService, forceDrawAndSkip as forceDrawAndSkipService } from '../services/gameFunctions';
 import { canPlayCard } from '../utils/cardValidation';
 
 /**
@@ -22,7 +22,10 @@ export default function GameRoomActive({ game, user, gameId }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCard, setPendingCard] = useState(null);
   const [activeAnimation, setActiveAnimation] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(null);
   const lastGameLogLength = useRef(0);
+  const timeoutRef = useRef(null);
+  const hasTriggeredTimeout = useRef(false);
 
   // Subscribe to player's hand from subcollection
   const { hand: myHand, loading: handLoading } = usePlayerHand(gameId, user?.uid);
@@ -105,6 +108,79 @@ export default function GameRoomActive({ game, user, gameId }) {
 
     lastGameLogLength.current = game.gameLog.length;
   }, [game.gameLog, game.players, game.currentCard, user?.uid]);
+
+  // Handle turn timeout - 15 second countdown
+  useEffect(() => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearInterval(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    // Reset timeout trigger flag when turn changes
+    hasTriggeredTimeout.current = false;
+
+    // Only track time if it's the current player's turn and game is in progress
+    if (!isMyTurn || game.status !== 'in-progress' || !game.turnStartedAt) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const turnTimeoutSeconds = game.turnTimeoutSeconds || 15;
+
+    // Calculate time remaining
+    const calculateTimeRemaining = () => {
+      const turnStartTime = game.turnStartedAt?.toMillis ? game.turnStartedAt.toMillis() : game.turnStartedAt;
+      const elapsed = Math.floor((Date.now() - turnStartTime) / 1000);
+      const remaining = Math.max(0, turnTimeoutSeconds - elapsed);
+      return remaining;
+    };
+
+    // Initial calculation
+    const initialRemaining = calculateTimeRemaining();
+    setTimeRemaining(initialRemaining);
+
+    // If already timed out, trigger immediately
+    if (initialRemaining === 0 && !hasTriggeredTimeout.current) {
+      hasTriggeredTimeout.current = true;
+      console.log('⏱️ Turn timeout - forcing draw and skip');
+      forceDrawAndSkipService(gameId).catch(err => {
+        console.error('❌ Failed to force draw and skip:', err);
+      });
+      return;
+    }
+
+    // Update countdown every second
+    timeoutRef.current = setInterval(() => {
+      const remaining = calculateTimeRemaining();
+      setTimeRemaining(remaining);
+
+      // Trigger timeout when time runs out
+      if (remaining === 0 && !hasTriggeredTimeout.current) {
+        hasTriggeredTimeout.current = true;
+        console.log('⏱️ Turn timeout - forcing draw and skip');
+
+        // Clear interval immediately
+        if (timeoutRef.current) {
+          clearInterval(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+
+        // Call force draw and skip
+        forceDrawAndSkipService(gameId).catch(err => {
+          console.error('❌ Failed to force draw and skip:', err);
+        });
+      }
+    }, 1000);
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [isMyTurn, game.status, game.turnStartedAt, game.turnTimeoutSeconds, game.currentPlayerIndex, gameId]);
 
   const handleCardClick = async (card, cardIndex) => {
     console.log('🃏 Card clicked:', { card, cardIndex, isMyTurn });
@@ -255,6 +331,7 @@ export default function GameRoomActive({ game, user, gameId }) {
         players={game.players}
         currentPlayerIndex={game.currentPlayerIndex}
         myUid={user?.uid}
+        timeRemaining={timeRemaining}
       />
 
       {/* Action Notifications */}

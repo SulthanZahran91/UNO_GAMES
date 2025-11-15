@@ -9,9 +9,24 @@ export default function TurnIndicator({
   direction,
   players,
   currentPlayerIndex,
-  myUid
+  myUid,
+  timeRemaining
 }) {
   if (!currentPlayer) return null;
+
+  // Format time remaining
+  const formatTime = (seconds) => {
+    if (seconds === null || seconds === undefined) return '';
+    return seconds > 0 ? `${seconds}s` : 'Time\'s up!';
+  };
+
+  // Determine timer color based on urgency
+  const getTimerColor = (seconds) => {
+    if (seconds === null || seconds === undefined) return 'white';
+    if (seconds <= 5) return '#ff4444'; // Red for last 5 seconds
+    if (seconds <= 10) return '#ffaa00'; // Orange for 6-10 seconds
+    return '#00ff00'; // Green for 11+ seconds
+  };
 
   // Calculate next player (skipping eliminated players with 0 cards)
   const getNextPlayerIndex = () => {
@@ -167,6 +182,19 @@ export default function TurnIndicator({
           }}>
             {currentPlayer.displayName}
           </div>
+          {/* Timer Display */}
+          {timeRemaining !== null && timeRemaining !== undefined && (
+            <div style={{
+              fontSize: 'clamp(0.7rem, 2vw, 0.9rem)',
+              fontWeight: 'bold',
+              color: getTimerColor(timeRemaining),
+              textShadow: `0 0 0.5rem ${getTimerColor(timeRemaining)}`,
+              marginTop: '0.125rem',
+              animation: timeRemaining <= 5 ? 'timerPulse 0.5s ease-in-out infinite' : 'none',
+            }}>
+              ⏱️ {formatTime(timeRemaining)}
+            </div>
+          )}
         </div>
 
         {/* Player Count */}
@@ -243,6 +271,17 @@ export default function TurnIndicator({
       )}
 
       <style>{`
+        @keyframes timerPulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.15);
+            opacity: 0.8;
+          }
+        }
+
         @keyframes borderFlash {
           0%, 100% {
             opacity: 0.4;

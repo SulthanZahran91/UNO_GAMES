@@ -273,6 +273,8 @@ export const startGame = onCall(async (request) => {
         direction: 'clockwise',
         pendingDrawCount: 0, // Track stacked draw cards
         hasDrawnThisTurn: false, // Track if player drew this turn
+        turnStartedAt: FieldValue.serverTimestamp(), // Track when turn started for timeout
+        turnTimeoutSeconds: 15, // 15 second timeout
         gameLog: [...recentLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -554,6 +556,7 @@ export const playCard = onCall(async (request) => {
         discardPile: [...gameData.discardPile, ...cardsToPlay], // Add all stacked cards
         gameLog: logMessage ? [...recentLog, logMessage] : recentLog,
         hasDrawnThisTurn: false, // Reset draw flag when playing a card
+        turnStartedAt: FieldValue.serverTimestamp(), // Reset turn timer
         updatedAt: FieldValue.serverTimestamp(),
       };
 
@@ -723,6 +726,7 @@ export const drawCard = onCall(async (request) => {
         updates.currentPlayerIndex = nextPlayerIndex;
         updates.pendingDrawCount = 0;
         updates.hasDrawnThisTurn = false;
+        updates.turnStartedAt = FieldValue.serverTimestamp(); // Reset turn timer
         updates.gameLog = [...recentLog, `${currentPlayer.displayName} drew ${cardsToDraw} cards!`];
       } else {
         // Normal draw - allow player to play or skip
@@ -833,6 +837,7 @@ export const skipTurn = onCall(async (request) => {
       const updates = {
         currentPlayerIndex: nextPlayerIndex,
         hasDrawnThisTurn: false,
+        turnStartedAt: FieldValue.serverTimestamp(), // Reset turn timer
         gameLog: [...recentLog, `${currentPlayer.displayName} skipped their turn`],
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -852,6 +857,184 @@ export const skipTurn = onCall(async (request) => {
       throw error;
     }
     throw new HttpsError('internal', `Failed to skip turn: ${error.message}`);
+  }
+});
+
+/**
+ * Force draw and skip turn when timeout occurs
+ * @param {string} gameId - The game ID
+ * @returns {Promise<{success: boolean}>}
+ */
+export const forceDrawAndSkip = onCall(async (request) => {
+  console.log('⏱️ forceDrawAndSkip called by:', request.auth?.uid);
+
+  if (!request.auth) {
+    console.error('❌ forceDrawAndSkip: Unauthenticated request');
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const userId = request.auth.uid;
+  const { gameId } = request.data || {};
+
+  if (!gameId) {
+    console.error('❌ forceDrawAndSkip: Missing gameId');
+    throw new HttpsError('invalid-argument', 'gameId is required');
+  }
+
+  console.log('📝 Force draw and skip:', { gameId, userId });
+
+  try {
+    const gameRef = db.collection('games').doc(gameId);
+    const playerRef = gameRef.collection('players').doc(userId);
+
+    // Get player's hand from subcollection first
+    const playerDoc = await playerRef.get();
+    if (!playerDoc.exists) {
+      console.error('❌ forceDrawAndSkip: Player hand not found:', userId);
+      throw new HttpsError('not-found', 'Player hand not found');
+    }
+
+    const playerData = playerDoc.data();
+    const playerHand = playerData.hand || [];
+
+    await db.runTransaction(async (transaction) => {
+      const gameDoc = await transaction.get(gameRef);
+
+      if (!gameDoc.exists) {
+        console.error('❌ forceDrawAndSkip: Game not found:', gameId);
+        throw new HttpsError('not-found', 'Game not found');
+      }
+
+      const gameData = gameDoc.data();
+
+      // Validate: game must be in progress
+      if (gameData.status !== 'in-progress') {
+        console.log('⚠️ forceDrawAndSkip: Game not in progress, ignoring timeout');
+        return; // Silently ignore if game ended
+      }
+
+      // Validate: it's still the player's turn
+      const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+      if (currentPlayer.uid !== userId) {
+        console.log('⚠️ forceDrawAndSkip: Not player\'s turn anymore, ignoring timeout');
+        return; // Silently ignore if turn already passed
+      }
+
+      // If player already drew this turn, just skip
+      if (gameData.hasDrawnThisTurn) {
+        console.log('✅ Player already drew, just skipping turn due to timeout');
+
+        const nextPlayerIndex = getNextPlayerIndex(
+          gameData.currentPlayerIndex,
+          gameData.players.length,
+          gameData.direction,
+          0,
+          gameData.players
+        );
+
+        const recentLog = gameData.gameLog.slice(-20);
+        const updates = {
+          currentPlayerIndex: nextPlayerIndex,
+          hasDrawnThisTurn: false,
+          turnStartedAt: FieldValue.serverTimestamp(),
+          gameLog: [...recentLog, `⏱️ ${currentPlayer.displayName} ran out of time and skipped their turn`],
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+
+        transaction.update(gameRef, updates);
+        return;
+      }
+
+      console.log('✅ Timeout enforced, forcing draw and skip...');
+
+      // Handle deck reshuffling if needed
+      let drawPile = gameData.drawPile;
+      let drawPileIndex = gameData.drawPileIndex;
+
+      if (drawPileIndex >= drawPile.length - 1) {
+        console.log('🔀 Reshuffling deck from discard pile');
+        const cardsToShuffle = gameData.discardPile.slice(0, -1);
+        shuffle(cardsToShuffle);
+        drawPile = [...cardsToShuffle, ...drawPile];
+        drawPileIndex = 0;
+      }
+
+      // Determine how many cards to draw
+      const pendingDrawCount = gameData.pendingDrawCount || 0;
+      const cardsToDraw = pendingDrawCount > 0 ? pendingDrawCount : 1;
+
+      console.log(`📊 Forcing draw of ${cardsToDraw} cards`);
+
+      // Draw cards
+      const { cards: drawnCards, newIndex } = drawCards(drawPile, drawPileIndex, cardsToDraw);
+
+      if (drawnCards.length === 0) {
+        console.error('❌ forceDrawAndSkip: No cards left to draw');
+        throw new HttpsError('failed-precondition', 'No cards left in deck');
+      }
+
+      // Update player's hand
+      const updatedHand = [...playerHand, ...drawnCards];
+
+      // Update player's card count in main document
+      const updatedPlayers = gameData.players.map((p, i) => {
+        if (i === gameData.currentPlayerIndex) {
+          return { ...p, cardCount: updatedHand.length };
+        }
+        return p;
+      });
+
+      // Advance turn
+      const nextPlayerIndex = getNextPlayerIndex(
+        gameData.currentPlayerIndex,
+        gameData.players.length,
+        gameData.direction,
+        0,
+        updatedPlayers
+      );
+
+      // Keep only last 20 log entries
+      const recentLog = gameData.gameLog.slice(-20);
+
+      // Build updates object
+      const updates = {
+        players: updatedPlayers,
+        drawPileIndex: newIndex,
+        currentPlayerIndex: nextPlayerIndex,
+        pendingDrawCount: 0,
+        hasDrawnThisTurn: false,
+        turnStartedAt: FieldValue.serverTimestamp(),
+        gameLog: [...recentLog, `⏱️ ${currentPlayer.displayName} ran out of time! Drew ${cardsToDraw} card(s) and skipped their turn`],
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      // Only update drawPile if it was reshuffled
+      if (drawPile !== gameData.drawPile) {
+        updates.drawPile = drawPile;
+      }
+
+      transaction.update(gameRef, updates);
+
+      // Update player's hand in subcollection
+      transaction.update(playerRef, {
+        hand: updatedHand,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      console.log('✅ Force draw and skip completed:', {
+        gameId,
+        cardsDrawn: drawnCards.length,
+        nextPlayerIndex,
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ forceDrawAndSkip error:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', `Failed to force draw and skip: ${error.message}`);
   }
 });
 
