@@ -57,10 +57,10 @@ export default function Card({ card, onClick, disabled = false, playable = false
 
   const cardSize = sizes[size] || sizes.normal;
 
-  const handleClick = () => {
+  const handleClick = (e) => {
     if (!disabled && onClick) {
       console.log('🃏 Card clicked:', card);
-      onClick(card);
+      onClick(e);
     }
   };
 
@@ -85,7 +85,7 @@ export default function Card({ card, onClick, disabled = false, playable = false
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleClick();
+          handleClick(e);
         }
       }}
       style={{
