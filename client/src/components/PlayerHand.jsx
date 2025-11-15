@@ -21,6 +21,7 @@ export default function PlayerHand({
 }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedIndices, setSelectedIndices] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false); // Mobile-friendly selection mode
 
   useEffect(() => {
     const handleResize = () => {
@@ -35,6 +36,7 @@ export default function PlayerHand({
   useEffect(() => {
     if (disabled) {
       setSelectedIndices([]);
+      setSelectionMode(false);
     }
   }, [disabled]);
 
@@ -50,22 +52,30 @@ export default function PlayerHand({
   });
 
   const handleCardClickInternal = (card, index, event) => {
-    // Check if shift/ctrl/cmd key is pressed for multi-selection
+    // Check if shift/ctrl/cmd key is pressed for multi-selection (desktop)
     const isMultiSelectKey = event?.shiftKey || event?.ctrlKey || event?.metaKey;
 
-    if (isMultiSelectKey && !disabled) {
+    // If in selection mode OR modifier key pressed, handle multi-selection
+    if ((selectionMode || isMultiSelectKey) && !disabled) {
       // Multi-select mode
       const isNumberCard = /^[0-9]$/.test(card.value);
 
       if (!isNumberCard) {
         // Can't stack non-number cards
-        onCardClick && onCardClick(card, index);
+        if (!selectionMode) {
+          // If using modifier key on non-number card, just play it
+          onCardClick && onCardClick(card, index);
+        }
         return;
       }
 
       if (selectedIndices.length === 0) {
         // First card selected
         setSelectedIndices([index]);
+        // Auto-enable selection mode when first card is selected
+        if (!selectionMode) {
+          setSelectionMode(true);
+        }
       } else {
         // Check if this card has the same value as already selected cards
         const firstSelectedCard = hand[selectedIndices[0]];
@@ -82,18 +92,10 @@ export default function PlayerHand({
         }
       }
     } else {
-      // Normal click - play the card or selected cards
-      if (selectedIndices.length > 0 && selectedIndices.includes(index)) {
-        // Play all selected cards
-        if (onMultiCardPlay) {
-          onMultiCardPlay(selectedIndices);
-          setSelectedIndices([]);
-        }
-      } else {
-        // Single card play or clear selection
-        setSelectedIndices([]);
-        onCardClick && onCardClick(card, index);
-      }
+      // Normal click - play single card
+      setSelectedIndices([]);
+      setSelectionMode(false);
+      onCardClick && onCardClick(card, index);
     }
   };
 
@@ -101,6 +103,23 @@ export default function PlayerHand({
     if (selectedIndices.length > 0 && onMultiCardPlay) {
       onMultiCardPlay(selectedIndices);
       setSelectedIndices([]);
+      setSelectionMode(false);
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedIndices([]);
+    setSelectionMode(false);
+  };
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) {
+      // Exiting selection mode
+      setSelectedIndices([]);
+      setSelectionMode(false);
+    } else {
+      // Entering selection mode
+      setSelectionMode(true);
     }
   };
 
@@ -131,18 +150,63 @@ export default function PlayerHand({
   return (
     <div style={{
       padding: 'clamp(0.75rem, 3vw, 1.25rem)',
-      background: 'rgba(0, 0, 0, 0.2)',
+      background: selectionMode ? 'rgba(76, 175, 80, 0.15)' : 'rgba(0, 0, 0, 0.2)',
       borderRadius: 'clamp(0.5rem, 2vw, 0.75rem)',
-      border: '0.125rem solid rgba(255, 255, 255, 0.1)',
+      border: selectionMode ? '0.125rem solid rgba(76, 175, 80, 0.5)' : '0.125rem solid rgba(255, 255, 255, 0.1)',
+      transition: 'all 0.3s ease',
     }}>
-      <h3 style={{
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 'clamp(0.625rem, 2.5vw, 0.9375rem)',
-        fontSize: 'clamp(0.875rem, 3vw, 1rem)',
-        color: '#aaa',
-        textAlign: 'center',
       }}>
-        Your Hand ({hand.length} cards)
-      </h3>
+        <h3 style={{
+          fontSize: 'clamp(0.875rem, 3vw, 1rem)',
+          color: '#aaa',
+          margin: 0,
+        }}>
+          Your Hand ({hand.length} cards)
+        </h3>
+
+        {!disabled && (
+          <button
+            onClick={handleToggleSelectionMode}
+            style={{
+              padding: 'clamp(0.375rem, 1.5vw, 0.5rem) clamp(0.625rem, 2.5vw, 0.875rem)',
+              fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
+              fontWeight: 'bold',
+              color: 'white',
+              background: selectionMode
+                ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
+                : 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+              border: 'none',
+              borderRadius: 'clamp(0.25rem, 1vw, 0.375rem)',
+              cursor: 'pointer',
+              boxShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {selectionMode ? '✕ Cancel' : '🎴 Select Multiple'}
+          </button>
+        )}
+      </div>
+
+      {selectionMode && (
+        <div style={{
+          marginBottom: 'clamp(0.5rem, 2vw, 0.75rem)',
+          padding: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+          background: 'rgba(76, 175, 80, 0.2)',
+          borderRadius: 'clamp(0.25rem, 1vw, 0.375rem)',
+          textAlign: 'center',
+          fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
+          color: '#4CAF50',
+          fontWeight: 'bold',
+        }}>
+          📱 Tap cards with the same number to select them
+        </div>
+      )}
 
       <div style={{
         display: 'flex',
@@ -209,28 +273,33 @@ export default function PlayerHand({
       </div>
 
       {/* Play Selected Button */}
-      {selectedIndices.length > 1 && (
+      {selectedIndices.length > 0 && (
         <div style={{
           marginTop: 'clamp(0.625rem, 2.5vw, 0.9375rem)',
-          textAlign: 'center',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 'clamp(0.5rem, 2vw, 0.75rem)',
+          justifyContent: 'center',
+          alignItems: 'stretch',
         }}>
           <button
             onClick={handlePlaySelected}
-            disabled={disabled}
+            disabled={disabled || selectedIndices.length < 2}
             style={{
+              flex: isMobile ? 'none' : '1',
               padding: 'clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)',
               fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
               fontWeight: 'bold',
               color: 'white',
-              background: disabled ? '#666' : 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+              background: (disabled || selectedIndices.length < 2) ? '#666' : 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
               border: 'none',
               borderRadius: 'clamp(0.375rem, 1.5vw, 0.5rem)',
-              cursor: disabled ? 'not-allowed' : 'pointer',
+              cursor: (disabled || selectedIndices.length < 2) ? 'not-allowed' : 'pointer',
               boxShadow: '0 0.25rem 0.5rem rgba(0, 0, 0, 0.3)',
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={(e) => {
-              if (!disabled) {
+              if (!disabled && selectedIndices.length >= 2) {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 0.375rem 0.75rem rgba(0, 0, 0, 0.4)';
               }
@@ -240,15 +309,42 @@ export default function PlayerHand({
               e.target.style.boxShadow = '0 0.25rem 0.5rem rgba(0, 0, 0, 0.3)';
             }}
           >
-            🎴 Play {selectedIndices.length} Cards (Stack)
+            {selectedIndices.length >= 2
+              ? `🎴 Play ${selectedIndices.length} Cards (Stack)`
+              : '🎴 Select More Cards'}
           </button>
-          <div style={{
-            marginTop: '0.5rem',
-            fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
-            color: '#aaa',
-          }}>
-            💡 Tip: Hold Shift/Ctrl and click cards to select multiple
-          </div>
+
+          {selectionMode && (
+            <button
+              onClick={handleCancelSelection}
+              style={{
+                flex: isMobile ? 'none' : '0.5',
+                padding: 'clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)',
+                fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+                fontWeight: 'bold',
+                color: 'white',
+                background: 'linear-gradient(135deg, #757575 0%, #616161 100%)',
+                border: 'none',
+                borderRadius: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+                cursor: 'pointer',
+                boxShadow: '0 0.25rem 0.5rem rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Clear Selection
+            </button>
+          )}
+        </div>
+      )}
+
+      {!selectionMode && selectedIndices.length === 0 && !disabled && (
+        <div style={{
+          marginTop: 'clamp(0.5rem, 2vw, 0.75rem)',
+          fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)',
+          color: '#aaa',
+          textAlign: 'center',
+        }}>
+          💡 Tip: {isMobile ? 'Tap "Select Multiple" to play cards of the same number together' : 'Hold Shift/Ctrl and click cards or use "Select Multiple" button'}
         </div>
       )}
 
