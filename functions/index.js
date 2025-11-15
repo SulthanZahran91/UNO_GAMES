@@ -310,8 +310,7 @@ export const startGame = onCall(async (request) => {
         pendingDrawCount: 0, // Track stacked draw cards
         hasDrawnThisTurn: false, // Track if player drew this turn
         turnStartedAt: FieldValue.serverTimestamp(), // Track when turn started for timeout
-        turnTimeoutSeconds: 15, // 15 second timeout
-        lastActionAt: FieldValue.serverTimestamp(), // Track last action for inactivity detection
+        turnTimeoutSeconds: 20, // 20 second timeout
         gameLog: [...recentLog, 'Game started!', `First card: ${startCard.color} ${startCard.value}`],
         updatedAt: FieldValue.serverTimestamp(),
       };
