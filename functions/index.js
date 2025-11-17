@@ -28,6 +28,50 @@ function getOrdinalSuffix(num) {
 }
 
 /**
+ * Helper function to log failed card play attempts
+ * @param {Object} transaction - Firestore transaction
+ * @param {Object} gameRef - Game document reference
+ * @param {Object} gameData - Current game state
+ * @param {Object} currentPlayer - Player attempting the move
+ * @param {Array|Object} cards - Card(s) attempted to play
+ * @param {string} reason - Reason for failure
+ */
+async function logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cards, reason) {
+  try {
+    const failedAttempts = gameData.recentFailedAttempts || [];
+
+    // Format cards for logging
+    const cardInfo = Array.isArray(cards)
+      ? cards.map(c => `${c.color || ''} ${c.value}`.trim()).join(', ')
+      : `${cards.color || ''} ${cards.value}`.trim();
+
+    // Create new failed attempt entry
+    const newAttempt = {
+      player: currentPlayer.displayName,
+      playerUid: currentPlayer.uid,
+      cards: cardInfo,
+      reason: reason,
+      timestamp: FieldValue.serverTimestamp(),
+      currentCard: `${gameData.currentCard.color} ${gameData.currentCard.value}`,
+      activeColor: gameData.activeColor,
+    };
+
+    // Add to beginning and keep last 100
+    const updatedAttempts = [newAttempt, ...failedAttempts].slice(0, 100);
+
+    // Update in transaction
+    transaction.update(gameRef, {
+      recentFailedAttempts: updatedAttempts,
+    });
+
+    console.log('📝 Logged failed attempt:', newAttempt);
+  } catch (err) {
+    // Don't let logging errors break the game
+    console.error('⚠️ Failed to log failed attempt:', err);
+  }
+}
+
+/**
  * Helper function to check automatic game-ending conditions
  * @param {Object} gameData - Current game state
  * @param {Object} updatedPlayers - Updated players array
@@ -78,8 +122,9 @@ export const createGame = onCall(async (request) => {
 
   const userId = request.auth.uid;
   const displayName = request.data?.displayName || `Player-${userId.slice(0, 6)}`;
+  const isPublic = request.data?.isPublic ?? false; // Default to private
 
-  console.log('📝 Creating game for user:', { userId, displayName });
+  console.log('📝 Creating game for user:', { userId, displayName, isPublic });
 
   try {
     // Create new game document
@@ -90,6 +135,7 @@ export const createGame = onCall(async (request) => {
       gameId,
       status: 'waiting',
       hostId: userId,
+      isPublic, // Public games appear in lobby list
       players: [{
         uid: userId,
         displayName,
@@ -470,6 +516,7 @@ export const playCard = onCall(async (request) => {
 
         if (!allSameValue) {
           console.error('❌ playCard: Cannot stack cards with different values');
+          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Cannot stack cards with different values');
           throw new HttpsError('invalid-argument', 'All stacked cards must have the same number');
         }
 
@@ -477,6 +524,7 @@ export const playCard = onCall(async (request) => {
         const isNumberCard = /^[0-9]$/.test(firstValue);
         if (!isNumberCard) {
           console.error('❌ playCard: Cannot stack non-number cards:', firstValue);
+          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, `Cannot stack non-number cards: ${firstValue}`);
           throw new HttpsError('invalid-argument', 'Only number cards can be stacked');
         }
 
@@ -493,6 +541,7 @@ export const playCard = onCall(async (request) => {
       if (pendingDrawCount > 0) {
         if (card.value !== 'draw2' && card.value !== 'draw4') {
           console.error('❌ playCard: Must play a draw card or draw cards:', { pendingDrawCount });
+          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, `Must draw ${pendingDrawCount} cards or play Draw 2/Draw 4`);
           throw new HttpsError('failed-precondition', `You must draw ${pendingDrawCount} cards or play a Draw 2/Draw 4 to stack`);
         }
         // Draw cards can always be played when there's a pending draw
@@ -501,6 +550,7 @@ export const playCard = onCall(async (request) => {
         // Normal validation
         if (!isValidMove(card, gameData.currentCard, gameData.activeColor)) {
           console.error('❌ playCard: Invalid move:', { card, currentCard: gameData.currentCard, activeColor: gameData.activeColor });
+          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Invalid move - card cannot be played');
           throw new HttpsError('failed-precondition', 'This card cannot be played');
         }
       }
@@ -508,6 +558,7 @@ export const playCard = onCall(async (request) => {
       // Validate: wild cards need a color
       if ((card.value === 'wild' || card.value === 'draw4') && !chosenColor) {
         console.error('❌ playCard: No color chosen for wild card');
+        await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Must choose a color for wild cards');
         throw new HttpsError('invalid-argument', 'Must choose a color for wild cards');
       }
 
