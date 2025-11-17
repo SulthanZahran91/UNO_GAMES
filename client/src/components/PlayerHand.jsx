@@ -32,13 +32,19 @@ export default function PlayerHand({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Clear selection when disabled or hand changes
+  // Clear selection when disabled changes
   useEffect(() => {
     if (disabled) {
       setSelectedIndices([]);
       setSelectionMode(false);
     }
   }, [disabled]);
+
+  // Clear selection when hand changes to prevent stale indices
+  useEffect(() => {
+    setSelectedIndices([]);
+    setSelectionMode(false);
+  }, [hand]);
 
   console.log('👋 PlayerHand render:', {
     cardCount: hand.length,
