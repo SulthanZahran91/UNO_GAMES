@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createGame, joinGame } from '../services/gameFunctions';
+import { usePublicGames } from '../hooks/usePublicGames';
 
 console.log('🏠 Lobby component loaded');
 
@@ -11,8 +12,12 @@ export default function Lobby({ user }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('');
+  const [isPublic, setIsPublic] = useState(true); // Default to public
 
-  console.log('🏠 Lobby render:', { user: user?.uid, displayName, status });
+  // Fetch public games
+  const { games: publicGames, loading: gamesLoading } = usePublicGames();
+
+  console.log('🏠 Lobby render:', { user: user?.uid, displayName, status, isPublic, publicGamesCount: publicGames.length });
 
   const handleCreateGame = async () => {
     if (!displayName.trim()) {
@@ -20,13 +25,13 @@ export default function Lobby({ user }) {
       return;
     }
 
-    console.log('🎮 Creating game with name:', displayName);
+    console.log('🎮 Creating game with name:', displayName, 'isPublic:', isPublic);
     setLoading(true);
     setError(null);
     setStatus('Creating game...');
 
     try {
-      const result = await createGame(displayName.trim());
+      const result = await createGame(displayName.trim(), isPublic);
       console.log('✅ Game created:', result.gameId);
       setStatus(`Game created! ID: ${result.gameId}`);
 
@@ -70,6 +75,35 @@ export default function Lobby({ user }) {
       }, 500);
     } catch (err) {
       console.error('❌ Failed to join game:', err);
+      setError(err.message || 'Failed to join game');
+      setStatus('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinPublicGame = async (gameId) => {
+    if (!displayName.trim()) {
+      setError('Please enter your display name first');
+      return;
+    }
+
+    console.log('🚪 Joining public game:', { gameId, displayName });
+    setLoading(true);
+    setError(null);
+    setStatus('Joining game...');
+
+    try {
+      await joinGame(gameId, displayName.trim());
+      console.log('✅ Joined public game:', gameId);
+      setStatus('Joined game!');
+
+      // Navigate to the game room
+      setTimeout(() => {
+        navigate(`/game/${gameId}`);
+      }, 500);
+    } catch (err) {
+      console.error('❌ Failed to join public game:', err);
       setError(err.message || 'Failed to join game');
       setStatus('');
     } finally {
@@ -165,6 +199,43 @@ export default function Lobby({ user }) {
           <p style={{ fontSize: '14px', color: '#aaa', marginBottom: '15px' }}>
             Start a new game and invite friends to join
           </p>
+
+          {/* Public/Private Toggle */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.2)',
+            padding: '12px',
+            borderRadius: '6px',
+            marginBottom: '15px',
+          }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}>
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                disabled={loading}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  marginRight: '10px',
+                  cursor: 'pointer',
+                }}
+              />
+              <span style={{ fontSize: '14px', flex: 1 }}>
+                <strong>{isPublic ? '🌐 Public Game' : '🔒 Private Game'}</strong>
+                <div style={{ color: '#aaa', fontSize: '12px', marginTop: '4px' }}>
+                  {isPublic
+                    ? 'Anyone can find and join this game'
+                    : 'Only people with the game ID can join'}
+                </div>
+              </span>
+            </label>
+          </div>
+
           <button
             onClick={handleCreateGame}
             disabled={loading || !displayName.trim()}
@@ -172,6 +243,96 @@ export default function Lobby({ user }) {
           >
             {loading ? '⏳ Creating...' : '🎮 Create Game'}
           </button>
+        </div>
+
+        {/* Public Games List Section */}
+        <div style={{
+          background: 'rgba(76, 175, 80, 0.1)',
+          border: '2px solid rgba(76, 175, 80, 0.3)',
+          padding: '20px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+        }}>
+          <h2 style={{ marginBottom: '15px', fontSize: '18px' }}>
+            🌐 Browse Public Games
+          </h2>
+          <p style={{ fontSize: '14px', color: '#aaa', marginBottom: '15px' }}>
+            Join a public game without needing a game ID
+          </p>
+
+          {gamesLoading ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '20px',
+              color: '#aaa',
+            }}>
+              ⏳ Loading public games...
+            </div>
+          ) : publicGames.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '20px',
+              color: '#aaa',
+              background: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '6px',
+            }}>
+              No public games available right now
+              <div style={{ fontSize: '12px', marginTop: '8px' }}>
+                Create a public game to get started!
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              maxHeight: '300px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}>
+              {publicGames.map((game) => (
+                <div
+                  key={game.gameId}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    padding: '15px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      marginBottom: '5px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {game.players[0]?.displayName}'s Game
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#aaa' }}>
+                      {game.players.length} / 12 players
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleJoinPublicGame(game.gameId)}
+                    disabled={loading || !displayName.trim() || game.players.length >= 12}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {game.players.length >= 12 ? '🔒 Full' : '🚪 Join'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Join Game Section */}
@@ -182,10 +343,10 @@ export default function Lobby({ user }) {
           borderRadius: '8px',
         }}>
           <h2 style={{ marginBottom: '15px', fontSize: '18px' }}>
-            🚪 Join Existing Game
+            🚪 Join Private Game
           </h2>
           <p style={{ fontSize: '14px', color: '#aaa', marginBottom: '15px' }}>
-            Enter a game ID to join
+            Enter a game ID to join a private game
           </p>
           <input
             type="text"

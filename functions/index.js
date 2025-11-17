@@ -122,8 +122,9 @@ export const createGame = onCall(async (request) => {
 
   const userId = request.auth.uid;
   const displayName = request.data?.displayName || `Player-${userId.slice(0, 6)}`;
+  const isPublic = request.data?.isPublic ?? false; // Default to private
 
-  console.log('📝 Creating game for user:', { userId, displayName });
+  console.log('📝 Creating game for user:', { userId, displayName, isPublic });
 
   try {
     // Create new game document
@@ -134,6 +135,7 @@ export const createGame = onCall(async (request) => {
       gameId,
       status: 'waiting',
       hostId: userId,
+      isPublic, // Public games appear in lobby list
       players: [{
         uid: userId,
         displayName,

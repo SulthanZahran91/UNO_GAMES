@@ -9,14 +9,15 @@ import { functions } from '../config/firebase';
 /**
  * Create a new game
  * @param {string} displayName - Player's display name
+ * @param {boolean} isPublic - Whether the game is public (appears in lobby list)
  * @returns {Promise<{gameId: string}>}
  */
-export async function createGame(displayName) {
-  console.log('🎮 Calling createGame function:', { displayName });
+export async function createGame(displayName, isPublic = false) {
+  console.log('🎮 Calling createGame function:', { displayName, isPublic });
 
   try {
     const createGameFn = httpsCallable(functions, 'createGame');
-    const result = await createGameFn({ displayName });
+    const result = await createGameFn({ displayName, isPublic });
 
     console.log('✅ createGame success:', result.data);
     return result.data;
