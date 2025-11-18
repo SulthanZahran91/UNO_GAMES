@@ -548,8 +548,25 @@ export const playCard = onCall(async (request) => {
         console.log('✅ Stacking draw card');
       } else {
         // Normal validation
-        if (!isValidMove(card, gameData.currentCard, gameData.activeColor)) {
-          console.error('❌ playCard: Invalid move:', { card, currentCard: gameData.currentCard, activeColor: gameData.activeColor });
+        // Ensure activeColor is set (fallback to currentCard color if not)
+        const effectiveActiveColor = gameData.activeColor || gameData.currentCard?.color;
+
+        console.log('🔍 Card validation check:', {
+          card: card,
+          currentCard: gameData.currentCard,
+          activeColor: gameData.activeColor,
+          effectiveActiveColor: effectiveActiveColor,
+          pendingDrawCount: pendingDrawCount,
+        });
+
+        if (!effectiveActiveColor) {
+          console.error('❌ playCard: No active color set!', { gameData });
+          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Game state error - no active color');
+          throw new HttpsError('internal', 'Game state error - no active color set');
+        }
+
+        if (!isValidMove(card, gameData.currentCard, effectiveActiveColor)) {
+          console.error('❌ playCard: Invalid move:', { card, currentCard: gameData.currentCard, activeColor: effectiveActiveColor });
           await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Invalid move - card cannot be played');
           throw new HttpsError('failed-precondition', 'This card cannot be played');
         }
