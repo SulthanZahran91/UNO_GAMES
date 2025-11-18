@@ -54,6 +54,15 @@ export function usePublicGames() {
         },
         (err) => {
           console.error('❌ usePublicGames: Snapshot error:', err);
+          console.error('Error code:', err.code);
+          console.error('Error message:', err.message);
+
+          // Provide helpful diagnostics
+          if (err.code === 'failed-precondition') {
+            console.error('🔧 SOLUTION: This error means the Firestore composite index is missing.');
+            console.error('   Run: firebase deploy --only firestore:indexes');
+          }
+
           setError(err);
           setLoading(false);
         }
