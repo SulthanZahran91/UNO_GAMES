@@ -15,7 +15,7 @@ export default function Lobby({ user }) {
   const [isPublic, setIsPublic] = useState(true); // Default to public
 
   // Fetch public games
-  const { games: publicGames, loading: gamesLoading } = usePublicGames();
+  const { games: publicGames, loading: gamesLoading, error: gamesError } = usePublicGames();
 
   console.log('🏠 Lobby render:', { user: user?.uid, displayName, status, isPublic, publicGamesCount: publicGames.length });
 
@@ -260,7 +260,27 @@ export default function Lobby({ user }) {
             Join a public game without needing a game ID
           </p>
 
-          {gamesLoading ? (
+          {gamesError ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '20px',
+              color: '#ff6b6b',
+              background: 'rgba(255, 107, 107, 0.1)',
+              border: '1px solid rgba(255, 107, 107, 0.3)',
+              borderRadius: '6px',
+            }}>
+              ⚠️ Error loading public games
+              <div style={{ fontSize: '12px', marginTop: '8px', color: '#ffaaaa' }}>
+                {gamesError.code === 'failed-precondition' ? (
+                  <>
+                    Missing database index. Please run: <code style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '3px' }}>firebase deploy --only firestore:indexes</code>
+                  </>
+                ) : (
+                  gamesError.message || 'Unable to load public games'
+                )}
+              </div>
+            </div>
+          ) : gamesLoading ? (
             <div style={{
               textAlign: 'center',
               padding: '20px',
