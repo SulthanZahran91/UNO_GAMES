@@ -77,25 +77,57 @@ export function isValidMove(cardToPlay, currentCard, activeColor) {
     activeColor,
   });
 
+  // Enhanced logging for debugging
+  console.log('🔍 Detailed validation:', {
+    'cardToPlay.color': cardToPlay?.color,
+    'cardToPlay.value': cardToPlay?.value,
+    'currentCard.color': currentCard?.color,
+    'currentCard.value': currentCard?.value,
+    'activeColor': activeColor,
+    'cardToPlay.color type': typeof cardToPlay?.color,
+    'activeColor type': typeof activeColor,
+    'cardToPlay.value type': typeof cardToPlay?.value,
+    'currentCard.value type': typeof currentCard?.value,
+  });
+
+  // Null safety checks
+  if (!cardToPlay || !currentCard) {
+    console.error('❌ Invalid: Missing card data');
+    return false;
+  }
+
+  // Normalize values by trimming whitespace
+  const cardColor = cardToPlay.color?.toString().trim();
+  const cardValue = cardToPlay.value?.toString().trim();
+  const currentValue = currentCard.value?.toString().trim();
+  const normalizedActiveColor = activeColor?.toString().trim();
+
+  console.log('🔍 Normalized values:', {
+    cardColor,
+    cardValue,
+    currentValue,
+    normalizedActiveColor,
+  });
+
   // Wild cards can always be played
-  if (cardToPlay.color === 'wild') {
+  if (cardColor === 'wild') {
     console.log('✅ Valid: Wild card');
     return true;
   }
 
   // Match by color
-  if (cardToPlay.color === activeColor) {
+  if (cardColor === normalizedActiveColor) {
     console.log('✅ Valid: Color match');
     return true;
   }
 
   // Match by value
-  if (cardToPlay.value === currentCard.value) {
+  if (cardValue === currentValue) {
     console.log('✅ Valid: Value match');
     return true;
   }
 
-  console.log('❌ Invalid move');
+  console.log('❌ Invalid move - no match found');
   return false;
 }
 

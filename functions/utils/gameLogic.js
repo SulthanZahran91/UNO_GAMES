@@ -115,6 +115,8 @@ export function applyCardEffect(card, gameState, chosenColor = null, stackCount 
         1, // Skip 1 player
         players // Pass players to skip eliminated ones
       );
+      // Reset pending draw count when playing a skip card
+      updates.pendingDrawCount = 0;
       updates.gameLog.push(`${currentPlayer.displayName} played Skip ${card.color}`);
       const skippedPlayerIndex = getNextPlayerIndex(currentPlayerIndex, players.length, direction, 0, players);
       const skippedPlayer = players[skippedPlayerIndex];
@@ -134,6 +136,8 @@ export function applyCardEffect(card, gameState, chosenColor = null, stackCount 
         0,
         players // Pass players to skip eliminated ones
       );
+      // Reset pending draw count when playing a reverse card
+      updates.pendingDrawCount = 0;
       updates.gameLog.push(`${currentPlayer.displayName} played Reverse ${card.color}`);
       updates.gameLog.push(`Direction reversed to ${updates.direction}!`);
       break;
@@ -181,6 +185,8 @@ export function applyCardEffect(card, gameState, chosenColor = null, stackCount 
         0,
         players // Pass players to skip eliminated ones
       );
+      // Reset pending draw count when playing a wild card
+      updates.pendingDrawCount = 0;
       updates.gameLog.push(`${currentPlayer.displayName} played Wild`);
       updates.gameLog.push(`Color changed to ${updates.activeColor}!`);
       break;
@@ -230,6 +236,8 @@ export function applyCardEffect(card, gameState, chosenColor = null, stackCount 
         0,
         players // Pass players to skip eliminated ones
       );
+      // Reset pending draw count when playing a number card
+      updates.pendingDrawCount = 0;
 
       // Show stacking in log if multiple cards played
       if (stackCount > 1) {
