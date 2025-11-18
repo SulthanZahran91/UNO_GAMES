@@ -1,6 +1,6 @@
 # UNO Game - Firebase Edition
 
-A real-time multiplayer UNO card game built with React and Firebase.
+A real-time multiplayer UNO card game built with React and Firebase. (check out at https://uno-games-b20ed.web.app/)
 
 ## 🏗️ Architecture
 
