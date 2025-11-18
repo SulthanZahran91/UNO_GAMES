@@ -34,6 +34,12 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // User status/connection collection for ping monitoring
+    match /status/{userId} {
+      // Users can read and write their own connection status
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
