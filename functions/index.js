@@ -531,11 +531,12 @@ export const playCard = onCall(async (request) => {
         console.log(`✅ Stacking ${cardsToPlay.length} cards with value ${firstValue}`);
       }
 
-      // Use the first card for validation (all have same value if stacking)
-      const card = cardsToPlay[0];
-
       // Check if there's a pending draw count
       const pendingDrawCount = gameData.pendingDrawCount || 0;
+
+      // Determine which card to use for game logic
+      // For stacking, we need to find a playable card
+      let card = cardsToPlay[0]; // Default to first card
 
       // If there's a pending draw, player can only play a draw card to stack
       if (pendingDrawCount > 0) {
@@ -552,7 +553,7 @@ export const playCard = onCall(async (request) => {
         const effectiveActiveColor = gameData.activeColor || gameData.currentCard?.color;
 
         console.log('🔍 Card validation check:', {
-          card: card,
+          cardsToPlay: cardsToPlay.map(c => `${c.color} ${c.value}`),
           currentCard: gameData.currentCard,
           activeColor: gameData.activeColor,
           effectiveActiveColor: effectiveActiveColor,
@@ -565,10 +566,38 @@ export const playCard = onCall(async (request) => {
           throw new HttpsError('internal', 'Game state error - no active color set');
         }
 
-        if (!isValidMove(card, gameData.currentCard, effectiveActiveColor)) {
-          console.error('❌ playCard: Invalid move:', { card, currentCard: gameData.currentCard, activeColor: effectiveActiveColor });
-          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Invalid move - card cannot be played');
-          throw new HttpsError('failed-precondition', 'This card cannot be played');
+        // When stacking, check if ANY card in the stack is playable
+        // (all cards have the same value, so any valid color makes the whole stack valid)
+        let isValidStack = false;
+        if (cardsToPlay.length > 1) {
+          // For stacked cards, check if any of them is playable
+          const playableCard = cardsToPlay.find(c => isValidMove(c, gameData.currentCard, effectiveActiveColor));
+          isValidStack = !!playableCard;
+
+          if (isValidStack) {
+            // Use the playable card for game logic
+            card = playableCard;
+            console.log('🔍 Stack validation: Found playable card:', `${card.color} ${card.value}`);
+          }
+
+          console.log('🔍 Stack validation:', {
+            cardsToPlay: cardsToPlay.map(c => `${c.color} ${c.value}`),
+            playableCard: playableCard ? `${playableCard.color} ${playableCard.value}` : 'none',
+            isValidStack,
+          });
+        } else {
+          // Single card - just check that one
+          isValidStack = isValidMove(card, gameData.currentCard, effectiveActiveColor);
+        }
+
+        if (!isValidStack) {
+          console.error('❌ playCard: Invalid move:', {
+            cardsToPlay: cardsToPlay.map(c => `${c.color} ${c.value}`),
+            currentCard: gameData.currentCard,
+            activeColor: effectiveActiveColor
+          });
+          await logFailedAttempt(transaction, gameRef, gameData, currentPlayer, cardsToPlay, 'Invalid move - no card in stack can be played');
+          throw new HttpsError('failed-precondition', cardsToPlay.length > 1 ? 'None of the selected cards can be played' : 'This card cannot be played');
         }
       }
 
